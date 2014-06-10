@@ -354,8 +354,61 @@ bgzip -c exchip.vcf > exchip.vcf.bgz
 tabix -r header.txt exchip.vcf.bgz > exchip.sn.vcf.bgz
 #sed ${chromlineno}'s/-[0-9]*-SM-[0-9A-Z]*//g' exchip.vcf > exchip.sn.vcf
 
+# gunzip exome.*.vcf.gz
+for exomefile in exome.*.vcf
+do
+    # exome: remove C1422:: or C1587:: and strings like -0002
+    chromlineno=`grep -m 1 -n ^#CHROM $exomefile | cut -f1 -d:`
+    head -n $chromlineno $exomefile | sed -r ${chromlineno}'s/-[0-9]+//g' | sed ${chromlineno}'s/C[0-9]*:://g' > header.txt
+    bgzip $exomefile
+    newfilename=`echo $exomefile | sed 's/vcf/sn.vcf.bgz/'`
+    tabix -r header.txt $exomefile.gz > $newfilename
+done
 
-# exome: remove C1422:: and strings like -0002
-chromlineno=`grep -m 1 -n ^#CHROM exome.agilent.snp.vcf | cut -f1 -d:`
-sed -i -r ${chromlineno}'s/-[0-9]+//g' exome.agilent.snp.vcf
-sed -i ${chromlineno}'s/C1422:://g' exome.agilent.snp.vcf
+
+# re-casting of the bybam coverage data
+# only need 3 things:
+# - coverage_proportions
+# - coverage_counts
+# - interval_summary - only the mean coverage stats
+
+fname=`ls *coverage_proportions | head -1`
+echo -n -e "sid\ttargets\tqual\t" > coverage_proportions.txt
+cat $fname | head -1 | cut -f 2- >> coverage_proportions.txt
+for fname in *coverage_proportions
+do
+    sid=`echo $fname | sed 's/cov_[a-z_]*.bed_//' | sed 's/\.bam.*//'` # long sample id
+    targets=`echo $fname | sed 's/cov_//' | sed 's/\.bed.*//'` # gencode_cds or broadexome
+    qual=`echo $fname | sed 's/.*bam_//' | sed 's/\.sample.*//'` # 20_1 or 0_0
+    echo -n -e "$sid\t$targets\t$qual\t" >> coverage_proportions.txt
+    cat $fname | tail -1 | cut -f 2- >> coverage_proportions.txt
+done
+
+fname=`ls *coverage_counts | head -1`
+echo -n -e "sid\ttargets\tqual\t" > coverage_counts.txt
+cat $fname | head -1 | cut -f 2- >> coverage_counts.txt
+for fname in *coverage_counts
+do
+    sid=`echo $fname | sed 's/cov_[a-z_]*.bed_//' | sed 's/\.bam.*//'` # long sample id
+    targets=`echo $fname | sed 's/cov_//' | sed 's/\.bed.*//'` # gencode_cds or broadexome
+    qual=`echo $fname | sed 's/.*bam_//' | sed 's/\.sample.*//'` # 20_1 or 0_0
+    echo -n -e "$sid\t$targets\t$qual\t" >> coverage_counts.txt
+    cat $fname | tail -1 | cut -f 2- >> coverage_counts.txt
+done
+
+# for interval_summary, we'll want to transpose, and handle each targetset separately
+for targetset in {broadexome.bed,gencode_cds.bed}
+do
+    fname=`ls *$targetset*interval_summary | head -1`
+    echo -n -e "sid\tqual\t" > interval_summary_$targetset.txt
+    cat $fname | cut -f1 | tail -n +2 | tr '\n' '\t' >> interval_summary_$targetset.txt
+    for fname in *$targetset*interval_summary
+    do
+        sid=`echo $fname | sed 's/cov_[a-z_]*.bed_//' | sed 's/\.bam.*//'` # long sample id
+        qual=`echo $fname | sed 's/.*bam_//' | sed 's/\.sample.*//'` # 20_1 or 0_0
+        echo -n -e "$sid\t$qual\t" >> interval_summary_$targetset.txt 
+        cat $fname | cut -f5 | tail -n +2 | tr '\n' '\t' >> interval_summary_$targetset.txt # $5 is sample avg coverage on interval
+    done
+done
+
+
