@@ -159,15 +159,14 @@ do
     done
 done
 
-
-# find jobs to re-run
+# run this block of code every time you need to re-run failed jobs
 grep exit jobtemp/*.out | sed 's/\.out:Exited.*//' > redos.txt
 mkdir -p jobtemp_failed
 for line in `cat redos.txt`
 do
     echo $line
     cmd=`grep -A 1 LSBATCH $line.out | tail -n +2`
-    bsub -q priority -P $RANDOM -J gtexqc -M 8000000 \
+    bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
         -o $line.out \
         -e $line.err "$cmd"
     mv $line.* jobtemp_failed
@@ -354,6 +353,7 @@ bgzip -c exchip.vcf > exchip.vcf.bgz
 tabix -r header.txt exchip.vcf.bgz > exchip.sn.vcf.bgz
 #sed ${chromlineno}'s/-[0-9]*-SM-[0-9A-Z]*//g' exchip.vcf > exchip.sn.vcf
 
+
 # gunzip exome.*.vcf.gz
 for exomefile in exome.*.vcf
 do
@@ -365,6 +365,36 @@ do
     tabix -r header.txt $exomefile.gz > $newfilename
 done
 
+# for WGS, first bgzip them
+for wgsfile in wgs.*.vcf
+do
+    bsub -q bweek -P $RANDOM -J bgzwgs -M 8000000 \
+            -o jobtemp/bgz.$wgsfile.out \
+            -e jobtemp/bgz.$wgsfile.err \
+    "bgzip $wgsfile"
+done
+# then come back and reheader them after all have finished bgzipping
+for wgsfile in wgs.*.vcf.gz
+do
+    # genome: just remove strings like -0002
+    bsub -q bweek -P $RANDOM -J snwgs -M 8000000 \
+            -o jobtemp/sn.$wgsfile.out \
+            -e jobtemp/sn.$wgsfile.err \
+    "chromlineno=`zcat $wgsfile | grep -m 1 -n ^#CHROM - | cut -f1 -d:`
+    zcat $wgsfile | head -n \$chromlineno | sed -r \${chromlineno}'s/-[0-9]+//g' > header.$wgsfile.txt
+    newfilename=`echo $wgsfile | sed 's/vcf.gz/sn.vcf.bgz/'`
+    tabix -r header.$wgsfile.txt $wgsfile > \$newfilename"
+done
+
+# this one was used as a test
+# wgsfile=scratch.vcf.gz
+#     bsub -q bweek -P $RANDOM -J snwgs -M 8000000 \
+#             -o /dev/null \
+#             -e /dev/null \
+#     "chromlineno=`zcat $wgsfile | grep -m 1 -n ^#CHROM - | cut -f1 -d:`
+#     zcat $wgsfile | head -n \$chromlineno | sed -r \${chromlineno}'s/-[0-9]+//g' > header.$wgsfile.txt
+#     newfilename=`echo $wgsfile | sed 's/vcf.gz/sn.vcf.bgz/'`
+#     tabix -r header.$wgsfile.txt $wgsfile > \$newfilename"
 
 # re-casting of the bybam coverage data
 # only need 3 things:
@@ -414,5 +444,7 @@ do
         echo -n -e "\n" >> interval_summary_$targetset.txt
     done
 done
+
+
 
 
