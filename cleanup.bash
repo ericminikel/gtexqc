@@ -372,6 +372,7 @@ done
 # - coverage_counts
 # - interval_summary - only the mean coverage stats
 
+# coverage proportions - one row per sample
 fname=`ls *coverage_proportions | head -1`
 echo -n -e "sid\ttargets\tqual\t" > coverage_proportions.txt
 cat $fname | head -1 | cut -f 2- >> coverage_proportions.txt
@@ -384,6 +385,7 @@ do
     cat $fname | tail -1 | cut -f 2- >> coverage_proportions.txt
 done
 
+# coverage counts - one row per sample; exactly like coverage_proportions above.
 fname=`ls *coverage_counts | head -1`
 echo -n -e "sid\ttargets\tqual\t" > coverage_counts.txt
 cat $fname | head -1 | cut -f 2- >> coverage_counts.txt
@@ -402,12 +404,14 @@ do
     fname=`ls *$targetset*interval_summary | head -1`
     echo -n -e "sid\tqual\t" > interval_summary_$targetset.txt
     cat $fname | cut -f1 | tail -n +2 | tr '\n' '\t' >> interval_summary_$targetset.txt
+    echo -n -e "\n" >> interval_summary_$targetset.txt
     for fname in *$targetset*interval_summary
     do
         sid=`echo $fname | sed 's/cov_[a-z_]*.bed_//' | sed 's/\.bam.*//'` # long sample id
         qual=`echo $fname | sed 's/.*bam_//' | sed 's/\.sample.*//'` # 20_1 or 0_0
         echo -n -e "$sid\t$qual\t" >> interval_summary_$targetset.txt 
         cat $fname | cut -f5 | tail -n +2 | tr '\n' '\t' >> interval_summary_$targetset.txt # $5 is sample avg coverage on interval
+        echo -n -e "\n" >> interval_summary_$targetset.txt
     done
 done
 
