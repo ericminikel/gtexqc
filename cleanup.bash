@@ -422,7 +422,7 @@ done
 # - coverage_proportions
 # - coverage_counts
 # - interval_summary - only the mean coverage stats
-
+cd bybam
 # coverage proportions - one row per sample
 fname=`ls *coverage_proportions | head -1`
 echo -n -e "sid\ttargets\tqual\t" > coverage_proportions.txt
@@ -465,6 +465,7 @@ do
         echo -n -e "\n" >> interval_summary_$targetset.txt
     done
 done
+cd ..
 
 # demonstrate that .bgz files must be renamed to .gz for GATK to accept them
 java -Xmx2g -jar $gatkjar \
@@ -579,9 +580,11 @@ grep -f array.qc.removed.indivs alldata.samples # none, good
 grep -f array.qc.removed.indivs wgs.samples # none, good
 
 
-
-
-
-
+# entire interval_summary table appears too large to read into R
+# therefore attempt to separate out the interval_summary data by technology
+# and then take averages using command line tools
+cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
+cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "20_1" {print}' > bybam/interval_summary_broadexome.bed_hq.txt
+grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
 
 
