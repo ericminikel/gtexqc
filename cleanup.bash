@@ -174,6 +174,22 @@ do
     mv $line.* jobtemp_failed
 done
 
+# the jobs on stuck nodes don't give an informative .out file, need a different method
+bjobs -dl > bjobs.dl.20140611.1035.txt
+cat bjobs.dl.20140611.1035.txt | sed 's/^ *//' | sed ':a;N;$!ba;s/\n//g' | sed 's/----*/\n/g'| grep Termination | egrep -o "Command <.*>" | sed 's/Command <//' | sed 's/>.*//' > commands-to-resubmit.txt
+# needs some further editing due to a few errors
+cat commands-to-resubmit.txt | sed 's/Xmx8g/Xmx8g /' | sed 's/omitDepthOutputAtEachBase/omitDepthOutputAtEachBase /' > commands-fixed.txt
+while read cmd
+do
+    outputfile=`echo $cmd | sed 's/.*-o //' | sed 's/-I.*//'`
+    outfile=`echo $outputfile".out" | sed 's/bybam/jobtemp/' | sed 's/ //'`
+    errfile=`echo $outputfile".err" | sed 's/bybam/jobtemp/' | sed 's/ //'` 
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o $outfile \
+        -e $errfile \
+        "$cmd"
+done < commands-fixed.txt
+
 zcat $exomesnpvcf | grep -m 1 ^#CHROM | tr '\t' '\n' | tail -n +10 > exome.snp.cols
 zcat $wgsvcf      | grep -m 1 ^#CHROM | tr '\t' '\n' | tail -n +10 > wgs.cols
 zcat $exomesuppsnpvcf | grep -m 1 ^#CHROM | tr '\t' '\n' | tail -n +10 > exome.supp.snp.cols
@@ -549,6 +565,22 @@ bsub -q bweek -P $RANDOM -J conc -M 8000000 \
               -o exchip.vs.array.gq30dp10.molt"
 
 # create an interval list of only the 2.5M array SNP sites
+zcat array.sn.vcf.gz | grep -v ^# | head | cut -f1-5 # work in progress
+
+
+# figure out which samples dropped from the 2.5M array on QC
+cat $arrayfam_postqc | sort | cut -d ' ' -f1 > postqc.indivs
+cat $arrayfam_preqc  | sort | cut -d ' ' -f1 > preqc.indivs
+comm -23 preqc.indivs postqc.indivs # gives 4 differences
+
+# are any of these in the current analysis set?
+comm -23 preqc.indivs postqc.indivs | sed 's/-[0-9]*-SM-.*//' > array.qc.removed.indivs
+grep -f array.qc.removed.indivs alldata.samples # none, good
+grep -f array.qc.removed.indivs wgs.samples # none, good
+
+
+
+
 
 
 
