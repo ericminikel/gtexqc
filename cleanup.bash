@@ -88,6 +88,8 @@ cat broadexome.bed | awk '{sum += $3-$2} END {print sum}' # 32760394
 # check number of entries per chrom
 cat broadexome.bed | cut -f1 | uniq -c
 
+# make a short interval list for test scripts
+cat gencode_cds.bed | head -1000 > test_targets.bed
 
 mkdir -p jobtemp
 
@@ -166,7 +168,7 @@ for line in `cat redos.txt`
 do
     echo $line
     cmd=`grep -A 1 LSBATCH $line.out | tail -n +2`
-    bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
         -o $line.out \
         -e $line.err "$cmd"
     mv $line.* jobtemp_failed
@@ -365,6 +367,7 @@ do
     tabix -r header.txt $exomefile.gz > $newfilename
 done
 
+# wgsfile=wgs.xten.indel.vcf
 # for WGS, first bgzip them
 for wgsfile in wgs.*.vcf
 do
@@ -373,6 +376,7 @@ do
             -e jobtemp/bgz.$wgsfile.err \
     "bgzip $wgsfile"
 done
+# if you need to re-run and force overwrite, change bgzip to bgzip -f
 # then come back and reheader them after all have finished bgzipping
 for wgsfile in wgs.*.vcf.gz
 do
@@ -385,6 +389,7 @@ do
     newfilename=`echo $wgsfile | sed 's/vcf.gz/sn.vcf.bgz/'`
     tabix -r header.$wgsfile.txt $wgsfile > \$newfilename"
 done
+# these jobs took 87 to 623 seconds.
 
 # this one was used as a test
 # wgsfile=scratch.vcf.gz
@@ -444,6 +449,106 @@ do
         echo -n -e "\n" >> interval_summary_$targetset.txt
     done
 done
+
+# demonstrate that .bgz files must be renamed to .gz for GATK to accept them
+java -Xmx2g -jar $gatkjar \
+   -R $b37ref \
+   -T ValidateVariants \
+   -V exchip.sn.vcf.bgz
+
+mv exchip.sn.vcf.bgz exchip.sn.vcf.gz
+tabix exchip.sn.vcf.gz
+
+java -Xmx2g -jar $gatkjar \
+   -R $b37ref \
+   -T ValidateVariants \
+   -V exchip.sn.vcf.gz
+
+# now do this for all bgz files
+for fname in *.bgz
+do
+    newfname=`echo $fname | sed 's/bgz/gz/'`
+    mv $fname $newfname
+done
+
+for fname in *sn.vcf.gz
+do
+    bsub -q bhour -P $RANDOM -J tabix -M 8000000 \
+            -o jobtemp/tabix.$fname.out \
+            -e jobtemp/tabix.$fname.err \
+    "tabix -f $fname"
+done
+
+#### genotypic concordance
+
+# compare each sequencing dataset with the 2.5M array as "truth"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.wgs.xten.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.wgs.xten.vs.array.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -comp array.sn.vcf.gz \
+              -eval wgs.xten.snp.sn.vcf.gz \
+              -moltenize \
+              -o wgs.xten.vs.array.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.wgs.2000.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.wgs.2000.vs.array.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -comp array.sn.vcf.gz \
+              -eval wgs.2000.snp.sn.vcf.gz \
+              -moltenize \
+              -o wgs.2000.vs.array.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.exome.agilent.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.exome.agilent.vs.array.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -comp array.sn.vcf.gz \
+              -eval exome.agilent.snp.sn.vcf.gz \
+              -moltenize \
+              -o exome.agilent.vs.array.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.exome.ice.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.exome.ice.vs.array.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -comp array.sn.vcf.gz \
+              -eval exome.ice.snp.sn.vcf.gz \
+              -moltenize \
+              -o exome.ice.vs.array.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.exchip.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.exchip.vs.array.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -comp array.sn.vcf.gz \
+              -eval exchip.sn.vcf.gz \
+              -moltenize \
+              -o exchip.vs.array.gq30dp10.molt"
+
+# create an interval list of only the 2.5M array SNP sites
 
 
 
