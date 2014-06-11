@@ -6,6 +6,14 @@ require(sqldf)
 require(reshape2)
 require(ggplot2)
 
+midpoints = function(numericvec) {
+  midpointvec = numeric(length(numericvec)-1)
+  midpointvec = 0.5*(numericvec[1:(length(numericvec)-1)]+
+                     numericvec[2:length(numericvec)])
+  return(midpointvec)
+}
+
+
 #### style parameters
 gcolor = '#FFA824' # aureoline yellow
 ecolor = '#0D4F8B' # indigo dye
@@ -51,7 +59,7 @@ colnames(bm) = c("sname","sid","ge","tech","bam")
 big6_snames = read.table("alldata.samples")$V1 # 6 samples that most analyses will be based on 
 wgs_snames = read.table("wgs.samples")$V1 # additional WGS samples
 is_be = read.table("interval_summary_broadexome.bed.txt",header=TRUE)
-is_gc = read.table("interval_summary_gencode_cds.bed.txt",header=TRUE)
+#is_gc = read.table("interval_summary_gencode_cds.bed.txt",header=TRUE)
 
 
 #### cumulative proportions plots
@@ -87,4 +95,34 @@ legend("bottomleft",legtable$text[1:3],col=legtable$k[1:3],lty=legtable$lty[1:3]
 
 #### interval summary stuff
 
+is_be_names = colnames(is_be[3:dim(is_be)[2]]) # get interval names
+is_be_chr = sapply(strsplit(substr(is_be_names,2,nchar(is_be_names)),"\\."),"[[",1) # extract chromosome
+chrbreaks = which(!duplicated(is_be_chr)) # find the first unique instance of each chromosome
+chrbreaks = c(chrbreaks,length(is_be_chr)) # add a final break for end of last chromosome
 
+is_be_mat = as.matrix(is_be[3:dim(is_be)[2]])
+
+# now that the matrix is separate, add more annotations to the data frame
+is_be$sname = bm$sname[match(is_be$sid,bm$sid)]
+is_be$ge    = bm$ge[match(is_be$sid,bm$sid)]
+is_be$tech  = bm$tech[match(is_be$sid,bm$sid)]
+
+is_be_20_1 = colMeans(is_be_mat[is_be$qual=="20_1",])
+is_be_0_0 =  colMeans(is_be_mat[is_be$qual=="0_0",])
+
+# get a list of sample ids for which both high and low quality counts are available
+has_both = unique(is_be$sid[duplicated(is_be$sid)]) 
+
+# find the ratio of high-quality to all depth by interval,
+# in only the samples with both
+is_be_20_1  = as.matrix(is_be[is_be$qual=="20_1" & is_be$sid %in% has_both,3:dim(is_be)[2]])
+is_be_0_0   = as.matrix(is_be[is_be$qual=="0_0"  & is_be$sid %in% has_both,3:dim(is_be)[2]])
+is_be_ratio = is_be_20_1 / is_be_0_0
+is_be_ratio_interval_mean = colMeans(is_be_ratio)
+
+plot(3:dim(is_be)[2],is_be_ratio_interval_mean,pch='.',col='blue',
+     xaxs='i',,yaxs='i',xaxt='n',yaxt='n',xlab='',
+     ylab='ratio',
+     main='Ratio of MAPQ ≥ 20 & BQ ≥ 1 coverage\nto all coverage, by interval')
+axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
+abline(v=chrbreaks,col='red')
