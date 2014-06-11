@@ -583,8 +583,83 @@ grep -f array.qc.removed.indivs wgs.samples # none, good
 # entire interval_summary table appears too large to read into R
 # therefore attempt to separate out the interval_summary data by technology
 # and then take averages using command line tools
-cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
-cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "20_1" {print}' > bybam/interval_summary_broadexome.bed_hq.txt
-grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
+# code to take average of each column in awk from: http://www.unix.com/shell-programming-and-scripting/186493-awk-based-script-find-average-all-columns-data-file.html
 
+# separate out the high and low quality depth calculations
+cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "20_1" {print}' > bybam/interval_summary_broadexome.bed_hq.txt
+cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "0_0" {print}' > bybam/interval_summary_broadexome.bed_lq.txt
+
+# create greppable (^ at front of line) files listing samples of interest by technology
+cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
+cat $wesmeta | grep Agilent | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > agilent.sids.grepready
+cat $wgsmeta | grep "HiSeq 2000" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > h2.sids.grepready
+cat $wgsmeta | grep "HiSeq X" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > hx.sids.grepready
+
+# extract sample sets by quality and technology
+grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
+grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_ice.txt
+grep -f agilent.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_agilent.txt
+grep -f agilent.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_agilent.txt
+grep -f h2.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_h2.txt
+grep -f h2.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_h2.txt
+grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_hx.txt
+grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_hx.txt
+
+# take column means
+cat bybam/interval_summary_broadexome.bed_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ic_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_ic_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ag_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_ag_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_h2_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_h2_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_hx_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_hx_means.txt
+
+# transpose
+cat is_be_lq_ic_means.txt | tr -s ' ' '\n' > is_be_lq_ic_means_t.txt
+cat is_be_hq_ag_means.txt | tr -s ' ' '\n' > is_be_hq_ag_means_t.txt
+cat is_be_lq_ag_means.txt | tr -s ' ' '\n' > is_be_lq_ag_means_t.txt
+cat is_be_hq_h2_means.txt | tr -s ' ' '\n' > is_be_hq_h2_means_t.txt
+cat is_be_lq_h2_means.txt | tr -s ' ' '\n' > is_be_lq_h2_means_t.txt
+cat is_be_hq_hx_means.txt | tr -s ' ' '\n' > is_be_hq_hx_means_t.txt
+cat is_be_lq_hx_means.txt | tr -s ' ' '\n' > is_be_lq_hx_means_t.txt
+
+# check
+wc -l is_be_lq_ic_means_t.txt
+wc -l is_be_hq_ag_means_t.txt
+wc -l is_be_lq_ag_means_t.txt
+wc -l is_be_hq_h2_means_t.txt
+wc -l is_be_lq_h2_means_t.txt
+wc -l is_be_hq_hx_means_t.txt
+wc -l is_be_lq_hx_means_t.txt
+
+# darn, all are slightly different lengths. something has gone wrong.
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1585 $ wc -l is_be_lq_ic_means_t.txt
+# 189895 is_be_lq_ic_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1586 $ wc -l is_be_hq_ag_means_t.txt
+# 189889 is_be_hq_ag_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1587 $ wc -l is_be_lq_ag_means_t.txt
+# 189895 is_be_lq_ag_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1588 $ wc -l is_be_hq_h2_means_t.txt
+# 189814 is_be_hq_h2_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1589 $ wc -l is_be_lq_h2_means_t.txt
+# 189895 is_be_lq_h2_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1590 $ wc -l is_be_hq_hx_means_t.txt
+# 189821 is_be_hq_hx_means_t.txt
+# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1591 $ wc -l is_be_lq_hx_means_t.txt
+# 189895 is_be_lq_hx_means_t.txt
+
+# paste
+paste \
+is_be_lq_ic_means_t.txt \
+is_be_hq_ag_means_t.txt \
+is_be_lq_ag_means_t.txt \
+is_be_hq_h2_means_t.txt \
+is_be_lq_h2_means_t.txt \
+is_be_hq_hx_means_t.txt \
+is_be_lq_hx_means_t.txt > is_be_means.txt
+
+grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
+# code to take average of each column in awk from: http://www.unix.com/shell-programming-and-scripting/186493-awk-based-script-find-average-all-columns-data-file.html
+cat bybam/interval_summary_broadexome.bed_hq_ice.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ice_means.txt
 
