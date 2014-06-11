@@ -99,6 +99,7 @@ is_be_names = colnames(is_be[3:dim(is_be)[2]]) # get interval names
 is_be_chr = sapply(strsplit(substr(is_be_names,2,nchar(is_be_names)),"\\."),"[[",1) # extract chromosome
 chrbreaks = which(!duplicated(is_be_chr)) # find the first unique instance of each chromosome
 chrbreaks = c(chrbreaks,length(is_be_chr)) # add a final break for end of last chromosome
+# intstarts = sapply(strsplit(is_be_names,"\\."),"[[",2) # extract start of interval
 
 is_be_mat = as.matrix(is_be[3:dim(is_be)[2]])
 
@@ -106,23 +107,36 @@ is_be_mat = as.matrix(is_be[3:dim(is_be)[2]])
 is_be$sname = bm$sname[match(is_be$sid,bm$sid)]
 is_be$ge    = bm$ge[match(is_be$sid,bm$sid)]
 is_be$tech  = bm$tech[match(is_be$sid,bm$sid)]
+is_be_meta = is_be[,c("sid","qual","sname","ge","tech")]
 
-is_be_20_1 = colMeans(is_be_mat[is_be$qual=="20_1",])
-is_be_0_0 =  colMeans(is_be_mat[is_be$qual=="0_0",])
 
 # get a list of sample ids for which both high and low quality counts are available
 has_both = unique(is_be$sid[duplicated(is_be$sid)]) 
 
 # find the ratio of high-quality to all depth by interval,
 # in only the samples with both
-is_be_20_1  = as.matrix(is_be[is_be$qual=="20_1" & is_be$sid %in% has_both,3:dim(is_be)[2]])
-is_be_0_0   = as.matrix(is_be[is_be$qual=="0_0"  & is_be$sid %in% has_both,3:dim(is_be)[2]])
+is_be_20_1  = as.matrix(is_be_mat[is_be$qual=="20_1" & is_be$sid %in% has_both,])
+is_be_0_0   = as.matrix(is_be_mat[is_be$qual=="0_0"  & is_be$sid %in% has_both,])
 is_be_ratio = is_be_20_1 / is_be_0_0
 is_be_ratio_interval_mean = colMeans(is_be_ratio)
 
-plot(3:dim(is_be)[2],is_be_ratio_interval_mean,pch='.',col='blue',
+plot(1:dim(is_be_mat)[2],is_be_ratio_interval_mean,pch='.',col='blue',
      xaxs='i',,yaxs='i',xaxt='n',yaxt='n',xlab='',
      ylab='ratio',
      main='Ratio of MAPQ ≥ 20 & BQ ≥ 1 coverage\nto all coverage, by interval')
 axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
 abline(v=chrbreaks,col='red')
+
+
+has_both = unique(is_be$sid[duplicated(is_be$sid)]) 
+hb = is_be_meta$sid %in% has_both
+b6 = is_be_meta$sname %in% big6_snames
+hq = is_be_meta$qual == '20_1'
+is_be_ice = is_be_mat[hb & b6 & hq & is_be_meta$tech=="ICE",]
+is_be_ag  = is_be_mat[hb & b6 & hq & is_be_meta$tech=="Agilent",]
+is_be_ice_means = colMeans(is_be_ice)
+is_be_ag_means = colMeans(is_be_ag)
+plot(is_be_ice_means,is_be_ag_means,pch='.',col=ecolor,
+     xlim=c(0,80),ylim=c(0,80))
+abline(a=0,b=1,col='red')
+cor.test(is_be_ice_means,is_be_ag_means) # r = .19, p < 2e-16
