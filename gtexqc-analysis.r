@@ -172,140 +172,6 @@ chrbreaks = which(!duplicated(is_be_chr))
 chrbreaks = c(chrbreaks,length(is_be_chr))
 
 
-## begin deprecated code
-is_be_mat = as.matrix(is_be[3:dim(is_be)[2]])
-
-# now that the matrix is separate, add more annotations to the data frame
-is_be$sname = bm$sname[match(is_be$sid,bm$sid)]
-is_be$ge    = bm$ge[match(is_be$sid,bm$sid)]
-is_be$tech  = bm$tech[match(is_be$sid,bm$sid)]
-is_be_meta = is_be[,c("sid","qual","sname","ge","tech")]
-
-# get a list of sample ids for which both high and low quality counts are available
-has_both = unique(is_be$sid[duplicated(is_be$sid)]) 
-
-# filters
-hb = is_be_meta$sid %in% has_both
-b6 = is_be_meta$sname %in% big6_snames
-hq = is_be_meta$qual == '20_1'
-lq = is_be_meta$qual == '0_0'
-wg = is_be_meta$ge == "WGS"
-we = is_be_meta$ge == "WES"
-ag = is_be_meta$tech == "Agilent"
-ic = is_be_meta$tech == "ICE"
-h2 = is_be_meta$tech == "HiSeq 2000"
-hx = is_be_meta$tech == "HiSeq X"
-
-# first plot average depth histograms
-# separately
-for (tech in unique(is_be_meta$tech)) {
-  techstring = gsub(" ","",tolower(tech))
-  png(paste('interval.avdepth.',techstring,".be.hq.png",sep=""),width=1200,height=800)
-  is_be_subs  = as.matrix(is_be_mat[b6 & hq & hb & is_be_meta$tech==tech,])
-  is_be_subs_means = colMeans(is_be_subs)
-  plot(1:dim(is_be_mat)[2],is_be_subs_means,pch='.',col=ecolor,
-       xaxs='i',,yaxs='i',xaxt='n',xlab='',ylim=c(0,200),
-       ylab='Mean depth',
-       main=paste('Mean depth by Broad Exome interval\n',tech))
-  axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-  abline(v=chrbreaks,col='red')
-  abline(h=0,col='black',lwd=2)
-  dev.off()
-}
-# is_be_ag  = as.matrix(is_be_mat[b6 & hq & hb & we & ag,])
-# is_be_ag_means = colMeans(is_be_ag)
-# plot(1:dim(is_be_mat)[2],is_be_ag_means,pch='.',col=ecolor,
-#      xaxs='i',,yaxs='i',xaxt='n',xlab='',ylim=c(0,200),
-#      ylab='Mean depth',
-#      main='Mean depth by Broad Exome interval\nAgilent Exomes')
-# axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-# abline(v=chrbreaks,col='red')
-# abline(h=0,col='black',lwd=2)
-# 
-# is_be_ic  = as.matrix(is_be_mat[b6 & hq & hb & we & ic,])
-# is_be_ic_means = colMeans(is_be_ic)
-# plot(1:dim(is_be_mat)[2],is_be_ic_means,pch='.',col=ecolor,
-#      xaxs='i',,yaxs='i',xaxt='n',xlab='',ylim=c(0,200),
-#      ylab='Mean depth',
-#      main='Mean depth by Broad Exome interval\nICE Exomes')
-# axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-# abline(v=chrbreaks,col='red')
-# abline(h=0,col='black',lwd=2)
-
-# also try combined plot pointing in opposite directions
-plot(1:dim(is_be_mat)[2],is_be_ag_means,pch='.',col=ecolor,
-     xaxs='i',,yaxs='i',xaxt='n',xlab='',ylim=c(-200,200),yaxt='n',
-     ylab='Mean depth',
-     main='Mean depth by Broad Exome interval\nAgilent Exomes')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-abline(v=chrbreaks,col='red')
-abline(h=0,col='black',lwd=2)
-points(1:dim(is_be_mat)[2],-is_be_ic_means,pch='.',col=ecolor)
-axis(side=2,at=c(-200,-100,0,100,200),labels=c(200,100,0,100,200))
-mtext(side=2,at=c(-150,150),padj=-2,text=c("ICE","Agilent"))
-
-
-# find the ratio of high-quality to all depth by interval,
-# in only the samples with both
-# first do this for WES Agilent
-is_be_20_1  = as.matrix(is_be_mat[hq & hb & we & ag,])
-is_be_0_0   = as.matrix(is_be_mat[lq & hb & we & ag,])
-is_be_ratio = is_be_20_1 / is_be_0_0
-is_be_ratio_interval_mean = colMeans(is_be_ratio)
-plot(1:dim(is_be_mat)[2],is_be_ratio_interval_mean,pch='.',col=ecolor,
-     xaxs='i',,yaxs='i',xaxt='n',xlab='',
-     ylab='ratio',
-     main='Ratio of MAPQ ≥ 20 & BQ ≥ 1 coverage\nto all coverage, by interval\nAgilent Exomes')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-abline(v=chrbreaks,col='red')
-
-is_be_20_1  = as.matrix(is_be_mat[hq & hb & we & ic,])
-is_be_0_0   = as.matrix(is_be_mat[lq & hb & we & ic,])
-is_be_ratio = is_be_20_1 / is_be_0_0
-is_be_ratio_interval_mean = colMeans(is_be_ratio)
-plot(1:dim(is_be_mat)[2],is_be_ratio_interval_mean,pch='.',col=ecolor,
-     xaxs='i',,yaxs='i',xaxt='n',xlab='',
-     ylab='ratio',
-     main='Ratio of MAPQ ≥ 20 & BQ ≥ 1 coverage\nto all coverage, by interval\nICE Exomes')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-abline(v=chrbreaks,col='red')
-
-
-
-# then for WGS
-is_be_20_1  = as.matrix(is_be_mat[hq & hb & wg,])
-is_be_0_0   = as.matrix(is_be_mat[lq & hb & wg,])
-is_be_ratio = is_be_20_1 / is_be_0_0
-is_be_ratio_interval_mean = colMeans(is_be_ratio)
-
-
-plot(1:dim(is_be_mat)[2],is_be_ratio_interval_mean,pch='.',col=ecolor,
-     xaxs='i',,yaxs='i',xaxt='n',xlab='',
-     ylab='ratio',
-     main='Ratio of MAPQ ≥ 20 & BQ ≥ 1 coverage\nto all coverage, by interval')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-abline(v=chrbreaks,col='red')
-
-
-
-has_both = unique(is_be$sid[duplicated(is_be$sid)]) 
-hb = is_be_meta$sid %in% has_both
-b6 = is_be_meta$sname %in% big6_snames
-hq = is_be_meta$qual == '20_1'
-is_be_ice = is_be_mat[hb & b6 & hq & is_be_meta$tech=="ICE",]
-is_be_ag  = is_be_mat[hb & b6 & hq & is_be_meta$tech=="Agilent",]
-is_be_ice_means = colMeans(is_be_ice)
-is_be_ag_means = colMeans(is_be_ag)
-# plot where each point is the mean of all samples for 1 interval
-plot(is_be_ice_means,is_be_ag_means,pch='.',col=ecolor,
-     xlim=c(0,80),ylim=c(0,80))
-abline(a=0,b=1,col='red')
-cor.test(is_be_ice_means,is_be_ag_means) # r = .19, p < 2e-16
-# plot where each point is 1 sample 1 interval?
-
-
-# end deprecated code
-
 # mean interval depth by quality on each tech
 png('interval.means.ice.by.quality.png',width=1200,height=800)
 plot(is_be_means$ICE.0_0,is_be_means$ICE.20_1,pch='.',col=ecolor,
@@ -407,3 +273,19 @@ axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
 axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
 dev.off()
 
+
+#### genotypic concordance
+
+# tables for overall WGS concordance with 2.5M array
+gcp_xten_array = read.table("wgs.xten.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
+gcp_2000_array = read.table("wgs.2000.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
+
+gcp_xten_array_table = acast(data=subset(gcp_xten_array, Comp_Genotype != "Mismatching_Alleles"),
+      formula=Eval_Genotype ~ Comp_Genotype,
+      value.var="Proportion")
+write.table(gcp_xten_array_table,"gcp_xten_array_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
+
+gcp_2000_array_table = acast(data=subset(gcp_2000_array, Comp_Genotype != "Mismatching_Alleles"),
+                             formula=Eval_Genotype ~ Comp_Genotype,
+                             value.var="Proportion")
+write.table(gcp_2000_array_table,"gcp_2000_array_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
