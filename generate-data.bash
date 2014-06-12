@@ -639,88 +639,69 @@ wc -l is_be_hq_hx_means_t.txt
 wc -l is_be_lq_hx_means_t.txt
 # ok
 
+# paste together, with an appropriate header and first column
 be_header_source=`ls bybam/*broadexome*interval_summary | head -1`
 cat $be_header_source | cut -f1 | tail -n +2 > is_be_interval_names.txt
 echo -ne "\n" >> is_be_interval_names.txt # add one blank row to match the data
 wc -l is_be_interval_names.txt
-
 echo -e "interval\tICE.20_1\tICE.0_0\tAgilent.20_1\tAgilent.0_0\th2000.20_1\th2000.0_0\thX.20_1\thX.0_0" > is_be_all_means.txt
 paste is_be_interval_names.txt is_be_hq_ic_means_t.txt is_be_lq_ic_means_t.txt is_be_hq_ag_means_t.txt is_be_lq_ag_means_t.txt is_be_hq_h2_means_t.txt is_be_lq_h2_means_t.txt is_be_hq_hx_means_t.txt is_be_lq_hx_means_t.txt >> is_be_all_means.txt
 
 
 
-
-
-
-# darn, all are slightly different lengths. something has gone wrong.
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1585 $ wc -l is_be_lq_ic_means_t.txt
-# 189895 is_be_lq_ic_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1586 $ wc -l is_be_hq_ag_means_t.txt
-# 189889 is_be_hq_ag_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1587 $ wc -l is_be_lq_ag_means_t.txt
-# 189895 is_be_lq_ag_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1588 $ wc -l is_be_hq_h2_means_t.txt
-# 189814 is_be_hq_h2_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1589 $ wc -l is_be_lq_h2_means_t.txt
-# 189895 is_be_lq_h2_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1590 $ wc -l is_be_hq_hx_means_t.txt
-# 189821 is_be_hq_hx_means_t.txt
-# bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1591 $ wc -l is_be_lq_hx_means_t.txt
-# 189895 is_be_lq_hx_means_t.txt
-
-# paste
-paste \
-is_be_lq_ic_means_t.txt \
-is_be_hq_ag_means_t.txt \
-is_be_lq_ag_means_t.txt \
-is_be_hq_h2_means_t.txt \
-is_be_lq_h2_means_t.txt \
-is_be_hq_hx_means_t.txt \
-is_be_lq_hx_means_t.txt > is_be_means.txt
-
-
-# still running jobs as of 5:39 on Weds
-# JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
-# 9246963 eminike RUN   bweek      node1383    node1146    conc       Jun 11 10:19
-# 9140678 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:54
-# 9140802 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:55
-# 9140824 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
-# 9140831 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
-# 9140840 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
-# 9140849 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
-# 9140857 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
-# 9140684 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:54
-# 9140886 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
-# 9140904 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
-# 9140906 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
-# 9140908 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
-# 9191792 eminike RUN   bhour      node1386    node1348    gtexqc     Jun 10 10:55
-# 9191806 eminike RUN   bhour      node1386    node1348    gtexqc     Jun 10 10:55
-# 9253211 eminike RUN   priority   node1383    node1136    gtexqc     Jun 11 12:29
-# 9264561 eminike RUN   interactiv tin         node1386    *n/bash -l Jun 11 14:12
-# 9243370 eminike RUN   interactiv tin         node1383    *n/bash -l Jun 11 08:21
-
-
-#the TERM_UNKNOWN ones are fine. the 1 and 130 are also fine. only 134s need re-submission
-# grep exit jobtemp/*.out | grepk 134
-# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-V1D1-0001.SM-33FA9.SM-5SOE2.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WCDI-0001.SM-3DEA6.SM-5SOE7.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WVLH-0001.SM-3F4BK.SM-5SOE6.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-WYJK-0001.SM-3E5QC.SM-5URBR.bam.noq.out:Exited with exit code 134.
-# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.noq.out:Exited with exit code 134.
-# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-XBED-0004.SM-3KL5O.SM-5URD9.bam.noq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHSB-0004.SM-3A7GE.SM-5URDE.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHWD-0002.SM-3DOVE.SM-5SOEC.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WL46-0002.SM-3DOVG.SM-5SOE8.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4EO-0003.SM-3H977.SM-5URCE.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4XY-0002.SM-3H152.SM-5URBG.bam.wq.out:Exited with exit code 134.
-# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.wq.out:Exited with exit code 134.
-
+#### check on DepthOfCoverage jobs
 # 2014-06-11 09:65 check-in
 # 158*4 = 632 files should be created
 ls bybam/*coverage_counts | wc -l #606
 bjobs | grep -v JOBID | grep -v interact | wc -l #26
 # 606 + 26 = 632, all accounted for.
+
+ls bybam/*coverage_counts | wc -l
+# 632 # huzzah - all finished as of June 12, 1:37p
+
+############
+
+#### get summary stats from concordance:
+for fname in *.molt
+do
+    cat $fname | grep -v GTEX > $fname.summary
+done
+
+fname=`ls *.molt.summary | head -1`
+echo -en "comparison\t" > all.concordance.summary
+cat $fname | grep -A 2 ^#:GATKTable:4 | tail -1 >> all.concordance.summary
+for fname in *.molt.summary
+do
+    echo -en $fname"\t" >> all.concordance.summary
+    cat $fname | grep -A 3 ^#:GATKTable:4 | tail -1 >> all.concordance.summary
+done
+
+for fname in *.molt.summary
+do
+    cat $fname | head -23 > $fname.concordance.proportions
+done
+
+# do genotype concordance against 2.5M array with target sites only
+for seqset in {wgs.xten,wgs.2000,exome.agilent,exome.ice}
+do
+    for targetset in {broadexome.bed,gencode_cds.bed}
+    do
+    bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.${targetset}.${seqset}.vs.array.gq30dp10.molt.out \
+            -e jobtemp/conc.${targetset}.${seqset}.vs.array.gq30dp10.molt.err \
+            "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -L $targetset \
+              -comp array.sn.vcf.gz \
+              -eval ${seqset}.snp.sn.vcf.gz \
+              -moltenize \
+              -o gc.${seqset}.vs.array.${targetset}.bed.gq30dp10.moltgc"
+    done
+done
+
 
 
 
