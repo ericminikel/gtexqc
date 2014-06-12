@@ -51,6 +51,14 @@ legtable = data.frame(
 # this table allows you to do things like this:
 # legend("bottomleft",legtable$text,col=legtable$k,lty=legtable$lty,lwd=2)
 
+# named vector of full names for plot titles and stuff. like a Python dictionary.
+fullname = c("Gencode coding intervals","Broad Exome intervals","whole exomes","whole genomes",
+             "ICE exomes","Agilent exomes","HiSeq 2000 genomes","HiSeq X Ten genomes",
+             "BQ ≥ 20 & MAPQ ≥ 1","No quality filters")
+names(fullname) = c('gencode_cds','broadexome','WES','WGS','ICE','Agilent','HiSeq 2000','HiSeq X',
+                    '20_1','0_0')
+
+
 #### read in data
 cp = read.table("coverage_proportions.txt",header=TRUE)
 cc = read.table("coverage_counts.txt",header=TRUE)
@@ -58,10 +66,9 @@ bm = read.table("bam.metadata.fixed",header=FALSE,sep='\t',comment.char='',quote
 colnames(bm) = c("sname","sid","ge","tech","bam")
 big6_snames = read.table("alldata.samples")$V1 # 6 samples that most analyses will be based on 
 wgs_snames = read.table("wgs.samples")$V1 # additional WGS samples
-is_be = read.table("interval_summary_broadexome.bed.txt",header=TRUE)
-#is_gc = read.table("interval_summary_gencode_cds.bed.txt",header=TRUE)
 # load means from interval-level data
-is_be_means = read.table("is_be_all_means.txt",header=TRUE)
+is_be_means = read.table("is_broadexome.bed_all_means.txt",header=TRUE)
+is_gc_means = read.table("is_gencode_cds.bed_all_means.txt",header=TRUE)
 
 
 #### cumulative proportions plots
@@ -82,34 +89,41 @@ gc = cp$targets == 'gencode_cds'
 be = cp$targets == 'broadexome'
 cpmat = as.matrix(cp[,4:84])
 
-boxplot(cp$meancov[lq & gc] ~ paste(cp$ge[lq & gc], cp$tech[lq & gc]),ylim=c(0,120),
-        col=c(ecolor,ecolor,gcolor,gcolor),
-        main="Mean coverage over Gencode coding intervals",
-        sub="No quality filters")
-categories = paste(cp$ge[hq & gc], cp$tech[hq & gc])
-cat_counts = table(categories)
-mtext(side=1,padj=4,at=1:4,text=paste("n =",cat_counts))
-
-boxplot(cp$meancov[hq & gc] ~ paste(cp$ge[hq & gc], cp$tech[hq & gc]),ylim=c(0,120),
-        col=c(ecolor,ecolor,gcolor,gcolor),
-        main="Mean coverage over Gencode coding intervals",
-        sub='BQ ≥ 20 & MAPQ ≥ 1 only')
-categories = paste(cp$ge[hq & gc], cp$tech[hq & gc])
-cat_counts = table(categories)
-mtext(side=1,padj=4,at=1:4,text=paste("n =",cat_counts))
-
-
-
-plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
-     xlab='Depth',ylab='Proportion of target covered at depth',
-     main='Cumulative depth of coverage\nover Broad Exome (GATK bundle)',
-     sub='N = 6 individuals sequenced using all three technologies')
-axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
-for (row in which(b6 & hq & be)) {
-  points(cpmat[row,],type='l',lwd=2,
-         lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
+# mean coverage boxplots
+for (target in unique(cp$targets)) {
+  for (qual in unique(cp$qual)) {
+    png(paste('mean.cov.',target,'.',qual,'.boxplot.png',sep=''),width=1200,height=800)
+    subs = cp$qual==qual & cp$targets==target
+    boxplot(cp$meancov[subs] ~ paste(cp$ge[subs], cp$tech[subs]),ylim=c(0,120),
+            col=c(ecolor,ecolor,gcolor,gcolor),
+            main=paste("Mean coverage over",fullname[target],"\n",fullname[qual]))
+    categories = paste(cp$ge[subs], cp$tech[subs])
+    cat_counts = table(categories)
+    mtext(side=1,padj=4,at=1:4,text=paste("n =",cat_counts))
+    dev.off()
+  } 
 }
-legend("bottomleft",legtable$text[1:3],col=legtable$k[1:3],lty=legtable$lty[1:3],lwd=2)
+
+
+# cumulative coverage plot for the 6 individuals that have three sequencing datasets
+for (target in unique(cp$targets)) {
+  for (qual in unique(cp$qual)) {
+    png(paste('cumul.cov.',target,'.',qual,'b6.indivs.png',sep=''),width=1200,height=800)
+    plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
+     xlab='Depth',ylab='Proportion of target covered at depth',
+     main=paste('Cumulative depth of coverage\nover',fullname[target],"\n",fullname[qual]),
+     sub='N = 6 individuals sequenced using all three technologies')
+    axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
+    for (row in which(b6 & cp$qual==qual & cp$targets==target)) {
+      points(cpmat[row,],type='l',lwd=2,
+             lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
+    }
+    legend("bottomleft",legtable$text[1:3],col=legtable$k[1:3],lty=legtable$lty[1:3],lwd=2)
+    dev.off()
+  }
+}
+
+# cumulative coverage plot of HiSeq 2000 vs. X Ten
 
 counts = table(cp$tech[hq & be & cp$ge=='WGS'])
 paste(counts, names(counts))
