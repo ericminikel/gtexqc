@@ -60,6 +60,8 @@ big6_snames = read.table("alldata.samples")$V1 # 6 samples that most analyses wi
 wgs_snames = read.table("wgs.samples")$V1 # additional WGS samples
 is_be = read.table("interval_summary_broadexome.bed.txt",header=TRUE)
 #is_gc = read.table("interval_summary_gencode_cds.bed.txt",header=TRUE)
+# load means from interval-level data
+is_be_means = read.table("is_be_all_means.txt",header=TRUE)
 
 
 #### cumulative proportions plots
@@ -164,14 +166,13 @@ legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4]
 # can add in more analyses from callability project here
 
 #### interval summary stuff
+is_be_names = is_be_means[,"interval"]
+is_be_chr = sapply(strsplit(is_be_names,":"),"[[",1)
+chrbreaks = which(!duplicated(is_be_chr))
+chrbreaks = c(chrbreaks,length(is_be_chr))
 
-is_be_names = colnames(is_be[3:dim(is_be)[2]]) # get interval names
-is_be_chr = sapply(strsplit(substr(is_be_names,2,nchar(is_be_names)),"\\."),"[[",1) # extract chromosome
-# manually fix the X # is_be_chr[is_be_chr==""] = "X" # this ruins everything!
-chrbreaks = which(!duplicated(is_be_chr)) # find the first unique instance of each chromosome
-chrbreaks = c(chrbreaks,length(is_be_chr)) # add a final break for end of last chromosome
-# intstarts = sapply(strsplit(is_be_names,"\\."),"[[",2) # extract start of interval
 
+## begin deprecated code
 is_be_mat = as.matrix(is_be[3:dim(is_be)[2]])
 
 # now that the matrix is separate, add more annotations to the data frame
@@ -303,4 +304,106 @@ cor.test(is_be_ice_means,is_be_ag_means) # r = .19, p < 2e-16
 # plot where each point is 1 sample 1 interval?
 
 
+# end deprecated code
+
+# mean interval depth by quality on each tech
+png('interval.means.ice.by.quality.png',width=1200,height=800)
+plot(is_be_means$ICE.0_0,is_be_means$ICE.20_1,pch='.',col=ecolor,
+     ylim=c(0,200),xlim=c(0,200),
+     xlab='Total depth, any quality',
+     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+     main='Mean Broad Exome interval depth\nin ICE exomes by quality',
+     sub=paste('N =',sum(bm$tech=="ICE"),"exomes"))
+dev.off()
+
+png('interval.means.agilent.by.quality.png',width=1200,height=800)
+plot(is_be_means$Agilent.0_0,is_be_means$Agilent.20_1,pch='.',col=ecolor,
+     ylim=c(0,200),xlim=c(0,200),
+     xlab='Total depth, any quality',
+     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+     main='Mean Broad Exome interval depth\nin Agilent exomes by quality',
+     sub=paste('N =',sum(bm$tech=="Agilent"),"exomes"))
+dev.off()
+
+png('interval.means.h2000.by.quality.png',width=1200,height=800)
+plot(is_be_means$h2000.0_0,is_be_means$h2000.20_1,pch='.',col=gcolor,
+     ylim=c(0,200),xlim=c(0,200),
+     xlab='Total depth, any quality',
+     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+     main='Mean Broad Exome interval depth\nin HiSeq 2000 whole genomes by quality',
+     sub=paste('N =',sum(bm$tech=="HiSeq 2000"),"genomes"))
+dev.off()
+
+png('interval.means.hx.by.quality.png',width=1200,height=800)
+plot(is_be_means$hX.0_0,is_be_means$hX.20_1,pch='.',col=gcolor,
+     ylim=c(0,200),xlim=c(0,200),
+     xlab='Total depth, any quality',
+     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+     main='Mean Broad Exome interval depth\nin HiSeq X Ten whole genomes by quality',
+     sub=paste('N =',sum(bm$tech=="HiSeq X"),"genomes"))
+dev.off()
+
+# mean interval depth between techs
+png('interval.means.ice.vs.agilent.hq.png',width=1200,height=800)
+plot(is_be_means$Agilent.20_1,is_be_means$ICE.20_1,pch='.',col=ecolor,
+     ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
+     xlab='Agilent depth',
+     ylab='ICE depth',
+     main='Mean Broad Exome interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nAgilent vs. ICE',
+     sub=paste('N =',sum(bm$tech=="ICE")," ICE exomes vs.",sum(bm$tech=="Agilent")," Agilent exomes"))
+m = lm(is_be_means$ICE.20_1 ~ is_be_means$Agilent.20_1)
+rho = sqrt(summary(m)$adj.r.squared)
+mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
+abline(m,col='red')
+dev.off()
+
+png('interval.means.h2.vs.hx.hq.png',width=1200,height=800)
+plot(is_be_means$h2000.20_1,is_be_means$hX.20_1,pch='.',col=gcolor,
+     ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
+     xlab='HiSeq 2000 depth',
+     ylab='HiSeq X Ten depth',
+     main='Mean Broad Exome interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nHiSeq 2000 vs. X Ten',
+     sub=paste('N =',sum(bm$tech=="HiSeq 2000")," HiSeq 2000 whole genomes vs.",sum(bm$tech=="HiSeq X")," HiSeq X Ten whole genomes"))
+m = lm(is_be_means$hX.20_1 ~ is_be_means$h2000.20_1)
+rho = sqrt(summary(m)$adj.r.squared)
+mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
+abline(m,col='red')
+dev.off()
+
+# which genomic regions account for differences in coverage?
+hx_problem_interval_idx = which(is_be_means$hX.20_1 < 20 & is_be_means$hX.20_1 < is_be_means$h2000.20_1)
+hx_depth_loss = rep(0.0,dim(is_be_means)[1])
+hx_depth_loss[hx_problem_interval_idx] =  -(is_be_means$h2000.20_1[hx_problem_interval_idx] - is_be_means$hX.20_1[hx_problem_interval_idx])/is_be_means$h2000.20_1[hx_problem_interval_idx]
+proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_be_means)[1]
+sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
+png('depth.loss.regions.xten.2000.png',width=1200,height=800)
+par(mar=c(6,6,4,4))
+plot(1:dim(is_be_means)[1],hx_depth_loss,pch=20,col=gcolor,
+     xaxt='n',xaxs='i',yaxs='i',yaxt='n',
+     ylab='% loss of depth in HiSeq X Ten\ncompared to HiSeq 2000',
+     xlab='Broad Exome interval',
+     main='Intervals where HiSeq X Ten loses high-quality depth compared to HiSeq 2000\nand X Ten has mean depth < 20',
+     sub=sub)
+abline(v=chrbreaks,col='red')
+axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
+axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
+dev.off()
+
+hx_problem_interval_idx = which(is_be_means$ICE.20_1 < 20 & is_be_means$ICE.20_1 < is_be_means$Agilent.20_1)
+hx_depth_loss = rep(0.0,dim(is_be_means)[1])
+hx_depth_loss[hx_problem_interval_idx] =  -(is_be_means$Agilent.20_1[hx_problem_interval_idx] - is_be_means$ICE.20_1[hx_problem_interval_idx])/is_be_means$Agilent.20_1[hx_problem_interval_idx]
+proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_be_means)[1]
+sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
+png('depth.loss.regions.ice.agilent.png',width=1200,height=800)
+par(mar=c(6,6,4,4))
+plot(1:dim(is_be_means)[1],hx_depth_loss,pch=20,col=ecolor,
+     xaxt='n',xaxs='i',yaxs='i',yaxt='n',
+     ylab='% loss of depth in ICE\ncompared to Agilent',
+     xlab='Broad Exome interval',
+     main='Intervals where ICE loses high-quality depth compared to Agilent\nand ICE has mean depth < 20',
+     sub=sub)
+abline(v=chrbreaks,col='red')
+axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
+axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
+dev.off()
 

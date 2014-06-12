@@ -162,7 +162,7 @@ do
 done
 
 # run this block of code every time you need to re-run failed jobs
-grep exit jobtemp/*.out | sed 's/\.out:Exited.*//' > redos.txt
+grep exit jobtemp/*.out | grep 134 | sed 's/\.out:Exited.*//' > redos.txt
 mkdir -p jobtemp_failed
 for line in `cat redos.txt`
 do
@@ -189,6 +189,9 @@ do
         -e $errfile \
         "$cmd"
 done < commands-fixed.txt
+
+bjobs -q bhour -l > bjobs.l.20140612.0951.txt
+cat bjobs.l.20140612.0951.txt  | sed 's/^ *//' | sed ':a;N;$!ba;s/\n//g' | sed 's/----*/\n/g'| grep UNKWN | egrep -o "Command <.*>" | sed 's/Command <//' | sed 's/>.*//' > commands-to-resubmit.txt
 
 zcat $exomesnpvcf | grep -m 1 ^#CHROM | tr '\t' '\n' | tail -n +10 > exome.snp.cols
 zcat $wgsvcf      | grep -m 1 ^#CHROM | tr '\t' '\n' | tail -n +10 > wgs.cols
@@ -659,7 +662,49 @@ is_be_lq_h2_means_t.txt \
 is_be_hq_hx_means_t.txt \
 is_be_lq_hx_means_t.txt > is_be_means.txt
 
-grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
-# code to take average of each column in awk from: http://www.unix.com/shell-programming-and-scripting/186493-awk-based-script-find-average-all-columns-data-file.html
-cat bybam/interval_summary_broadexome.bed_hq_ice.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ice_means.txt
+
+# still running jobs as of 5:39 on Weds
+# JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+# 9246963 eminike RUN   bweek      node1383    node1146    conc       Jun 11 10:19
+# 9140678 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:54
+# 9140802 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:55
+# 9140824 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
+# 9140831 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
+# 9140840 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
+# 9140849 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
+# 9140857 eminike RUN   bhour      node1387    node1338    gtexqc     Jun  9 12:56
+# 9140684 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:54
+# 9140886 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
+# 9140904 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
+# 9140906 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
+# 9140908 eminike RUN   bhour      node1387    node1348    gtexqc     Jun  9 12:57
+# 9191792 eminike RUN   bhour      node1386    node1348    gtexqc     Jun 10 10:55
+# 9191806 eminike RUN   bhour      node1386    node1348    gtexqc     Jun 10 10:55
+# 9253211 eminike RUN   priority   node1383    node1136    gtexqc     Jun 11 12:29
+# 9264561 eminike RUN   interactiv tin         node1386    *n/bash -l Jun 11 14:12
+# 9243370 eminike RUN   interactiv tin         node1383    *n/bash -l Jun 11 08:21
+
+
+#the TERM_UNKNOWN ones are fine. the 1 and 130 are also fine. only 134s need re-submission
+grep exit jobtemp/*.out | grepk 134
+jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-V1D1-0001.SM-33FA9.SM-5SOE2.bam.wq.out:Exited with exit code 134.
+jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WCDI-0001.SM-3DEA6.SM-5SOE7.bam.wq.out:Exited with exit code 134.
+jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WVLH-0001.SM-3F4BK.SM-5SOE6.bam.wq.out:Exited with exit code 134.
+jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-WYJK-0001.SM-3E5QC.SM-5URBR.bam.noq.out:Exited with exit code 134.
+jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.noq.out:Exited with exit code 134.
+jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-XBED-0004.SM-3KL5O.SM-5URD9.bam.noq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHSB-0004.SM-3A7GE.SM-5URDE.bam.wq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHWD-0002.SM-3DOVE.SM-5SOEC.bam.wq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WL46-0002.SM-3DOVG.SM-5SOE8.bam.wq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4EO-0003.SM-3H977.SM-5URCE.bam.wq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4XY-0002.SM-3H152.SM-5URBG.bam.wq.out:Exited with exit code 134.
+jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.wq.out:Exited with exit code 134.
+
+# 2014-06-11 09:65 check-in
+# 158*4 = 632 files should be created
+ls bybam/*coverage_counts | wc -l #606
+bjobs | grep -v JOBID | grep -v interact | wc -l #26
+# 606 + 26 = 632, all accounted for.
+
+
 
