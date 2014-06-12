@@ -609,25 +609,27 @@ grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/i
 grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_hx.txt
 
 # take column means
-cat bybam/interval_summary_broadexome.bed_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ic_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_ic_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_ag_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_ag_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_h2_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_h2_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_hq_hx_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf "%10s" ,a[i]/(NR);print ""}' > is_be_lq_hx_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_ic_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_ic_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_ag_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_ag_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_h2_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_h2_means.txt
+cat bybam/interval_summary_broadexome.bed_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_hx_means.txt
+cat bybam/interval_summary_broadexome.bed_lq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_hx_means.txt
 
 # transpose
-cat is_be_lq_ic_means.txt | tr -s ' ' '\n' > is_be_lq_ic_means_t.txt
-cat is_be_hq_ag_means.txt | tr -s ' ' '\n' > is_be_hq_ag_means_t.txt
-cat is_be_lq_ag_means.txt | tr -s ' ' '\n' > is_be_lq_ag_means_t.txt
-cat is_be_hq_h2_means.txt | tr -s ' ' '\n' > is_be_hq_h2_means_t.txt
-cat is_be_lq_h2_means.txt | tr -s ' ' '\n' > is_be_lq_h2_means_t.txt
-cat is_be_hq_hx_means.txt | tr -s ' ' '\n' > is_be_hq_hx_means_t.txt
-cat is_be_lq_hx_means.txt | tr -s ' ' '\n' > is_be_lq_hx_means_t.txt
+cat is_be_hq_ic_means.txt | tr '\t' '\n' > is_be_hq_ic_means_t.txt
+cat is_be_lq_ic_means.txt | tr '\t' '\n' > is_be_lq_ic_means_t.txt
+cat is_be_hq_ag_means.txt | tr '\t' '\n' > is_be_hq_ag_means_t.txt
+cat is_be_lq_ag_means.txt | tr '\t' '\n' > is_be_lq_ag_means_t.txt
+cat is_be_hq_h2_means.txt | tr '\t' '\n' > is_be_hq_h2_means_t.txt
+cat is_be_lq_h2_means.txt | tr '\t' '\n' > is_be_lq_h2_means_t.txt
+cat is_be_hq_hx_means.txt | tr '\t' '\n' > is_be_hq_hx_means_t.txt
+cat is_be_lq_hx_means.txt | tr '\t' '\n' > is_be_lq_hx_means_t.txt
 
 # check
+wc -l is_be_hq_ic_means_t.txt
 wc -l is_be_lq_ic_means_t.txt
 wc -l is_be_hq_ag_means_t.txt
 wc -l is_be_lq_ag_means_t.txt
@@ -635,6 +637,20 @@ wc -l is_be_hq_h2_means_t.txt
 wc -l is_be_lq_h2_means_t.txt
 wc -l is_be_hq_hx_means_t.txt
 wc -l is_be_lq_hx_means_t.txt
+# ok
+
+be_header_source=`ls bybam/*broadexome*interval_summary | head -1`
+cat $be_header_source | cut -f1 | tail -n +2 > is_be_interval_names.txt
+echo -ne "\n" >> is_be_interval_names.txt # add one blank row to match the data
+wc -l is_be_interval_names.txt
+
+echo -e "interval\tICE.20_1\tICE.0_0\tAgilent.20_1\tAgilent.0_0\th2000.20_1\th2000.0_0\thX.20_1\thX.0_0" > is_be_all_means.txt
+paste is_be_interval_names.txt is_be_hq_ic_means_t.txt is_be_lq_ic_means_t.txt is_be_hq_ag_means_t.txt is_be_lq_ag_means_t.txt is_be_hq_h2_means_t.txt is_be_lq_h2_means_t.txt is_be_hq_hx_means_t.txt is_be_lq_hx_means_t.txt >> is_be_all_means.txt
+
+
+
+
+
 
 # darn, all are slightly different lengths. something has gone wrong.
 # bash:node1383:/humgen/atgu1/fs03/eminikel/053gtexqc 1585 $ wc -l is_be_lq_ic_means_t.txt
@@ -686,19 +702,19 @@ is_be_lq_hx_means_t.txt > is_be_means.txt
 
 
 #the TERM_UNKNOWN ones are fine. the 1 and 130 are also fine. only 134s need re-submission
-grep exit jobtemp/*.out | grepk 134
-jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-V1D1-0001.SM-33FA9.SM-5SOE2.bam.wq.out:Exited with exit code 134.
-jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WCDI-0001.SM-3DEA6.SM-5SOE7.bam.wq.out:Exited with exit code 134.
-jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WVLH-0001.SM-3F4BK.SM-5SOE6.bam.wq.out:Exited with exit code 134.
-jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-WYJK-0001.SM-3E5QC.SM-5URBR.bam.noq.out:Exited with exit code 134.
-jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.noq.out:Exited with exit code 134.
-jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-XBED-0004.SM-3KL5O.SM-5URD9.bam.noq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHSB-0004.SM-3A7GE.SM-5URDE.bam.wq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHWD-0002.SM-3DOVE.SM-5SOEC.bam.wq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WL46-0002.SM-3DOVG.SM-5SOE8.bam.wq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4EO-0003.SM-3H977.SM-5URCE.bam.wq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4XY-0002.SM-3H152.SM-5URBG.bam.wq.out:Exited with exit code 134.
-jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.wq.out:Exited with exit code 134.
+# grep exit jobtemp/*.out | grepk 134
+# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-V1D1-0001.SM-33FA9.SM-5SOE2.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WCDI-0001.SM-3DEA6.SM-5SOE7.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.broadexome.bed.PDO-3412.G67881.GTEX-WVLH-0001.SM-3F4BK.SM-5SOE6.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-WYJK-0001.SM-3E5QC.SM-5URBR.bam.noq.out:Exited with exit code 134.
+# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.noq.out:Exited with exit code 134.
+# jobtemp/job.bybam.gencode_cds.bed.PDO-3412.G67881.GTEX-XBED-0004.SM-3KL5O.SM-5URD9.bam.noq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHSB-0004.SM-3A7GE.SM-5URDE.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WHWD-0002.SM-3DOVE.SM-5SOEC.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-WL46-0002.SM-3DOVG.SM-5SOE8.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4EO-0003.SM-3H977.SM-5URCE.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X4XY-0002.SM-3H152.SM-5URBG.bam.wq.out:Exited with exit code 134.
+# jobtemp/job.gencode_cds.bed.PDO-3412.G67881.GTEX-X8HC-0003.SM-3IRO3.SM-5URDI.bam.wq.out:Exited with exit code 134.
 
 # 2014-06-11 09:65 check-in
 # 158*4 = 632 files should be created
