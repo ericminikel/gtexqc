@@ -588,66 +588,67 @@ grep -f array.qc.removed.indivs wgs.samples # none, good
 # and then take averages using command line tools
 # code to take average of each column in awk from: http://www.unix.com/shell-programming-and-scripting/186493-awk-based-script-find-average-all-columns-data-file.html
 
-# separate out the high and low quality depth calculations
-cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "20_1" {print}' > bybam/interval_summary_broadexome.bed_hq.txt
-cat bybam/interval_summary_broadexome.bed.txt | awk '$2 == "0_0" {print}' > bybam/interval_summary_broadexome.bed_lq.txt
-
-# create greppable (^ at front of line) files listing samples of interest by technology
-cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
-cat $wesmeta | grep Agilent | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > agilent.sids.grepready
-cat $wgsmeta | grep "HiSeq 2000" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > h2.sids.grepready
-cat $wgsmeta | grep "HiSeq X" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > hx.sids.grepready
-
-# extract sample sets by quality and technology
-grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_ice.txt
-grep -f ice.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_ice.txt
-grep -f agilent.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_agilent.txt
-grep -f agilent.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_agilent.txt
-grep -f h2.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_h2.txt
-grep -f h2.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_h2.txt
-grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_hq.txt > bybam/interval_summary_broadexome.bed_hq_hx.txt
-grep -f hx.sids.grepready bybam/interval_summary_broadexome.bed_lq.txt > bybam/interval_summary_broadexome.bed_lq_hx.txt
-
-# take column means
-cat bybam/interval_summary_broadexome.bed_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_ic_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_ic_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_ag_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_ag_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_h2_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_h2_means.txt
-cat bybam/interval_summary_broadexome.bed_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_hq_hx_means.txt
-cat bybam/interval_summary_broadexome.bed_lq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_be_lq_hx_means.txt
-
-# transpose
-cat is_be_hq_ic_means.txt | tr '\t' '\n' > is_be_hq_ic_means_t.txt
-cat is_be_lq_ic_means.txt | tr '\t' '\n' > is_be_lq_ic_means_t.txt
-cat is_be_hq_ag_means.txt | tr '\t' '\n' > is_be_hq_ag_means_t.txt
-cat is_be_lq_ag_means.txt | tr '\t' '\n' > is_be_lq_ag_means_t.txt
-cat is_be_hq_h2_means.txt | tr '\t' '\n' > is_be_hq_h2_means_t.txt
-cat is_be_lq_h2_means.txt | tr '\t' '\n' > is_be_lq_h2_means_t.txt
-cat is_be_hq_hx_means.txt | tr '\t' '\n' > is_be_hq_hx_means_t.txt
-cat is_be_lq_hx_means.txt | tr '\t' '\n' > is_be_lq_hx_means_t.txt
-
-# check
-wc -l is_be_hq_ic_means_t.txt
-wc -l is_be_lq_ic_means_t.txt
-wc -l is_be_hq_ag_means_t.txt
-wc -l is_be_lq_ag_means_t.txt
-wc -l is_be_hq_h2_means_t.txt
-wc -l is_be_lq_h2_means_t.txt
-wc -l is_be_hq_hx_means_t.txt
-wc -l is_be_lq_hx_means_t.txt
-# ok
-
-# paste together, with an appropriate header and first column
-be_header_source=`ls bybam/*broadexome*interval_summary | head -1`
-cat $be_header_source | cut -f1 | tail -n +2 > is_be_interval_names.txt
-echo -ne "\n" >> is_be_interval_names.txt # add one blank row to match the data
-wc -l is_be_interval_names.txt
-echo -e "interval\tICE.20_1\tICE.0_0\tAgilent.20_1\tAgilent.0_0\th2000.20_1\th2000.0_0\thX.20_1\thX.0_0" > is_be_all_means.txt
-paste is_be_interval_names.txt is_be_hq_ic_means_t.txt is_be_lq_ic_means_t.txt is_be_hq_ag_means_t.txt is_be_lq_ag_means_t.txt is_be_hq_h2_means_t.txt is_be_lq_h2_means_t.txt is_be_hq_hx_means_t.txt is_be_lq_hx_means_t.txt >> is_be_all_means.txt
-
-
+for targetset in {broadexome.bed,gencode_cds.bed}
+do
+    # separate out the high and low quality depth calculations
+    cat bybam/interval_summary_${targetset}.txt | awk '$2 == "20_1" {print}' > bybam/interval_summary_${targetset}_hq.txt
+    cat bybam/interval_summary_${targetset}.txt | awk '$2 == "0_0" {print}' > bybam/interval_summary_${targetset}_lq.txt
+    
+    # create greppable (^ at front of line) files listing samples of interest by technology
+    cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
+    cat $wesmeta | grep Agilent | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > agilent.sids.grepready
+    cat $wgsmeta | grep "HiSeq 2000" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > h2.sids.grepready
+    cat $wgsmeta | grep "HiSeq X" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > hx.sids.grepready
+    
+    # extract sample sets by quality and technology
+    grep -f ice.sids.grepready bybam/interval_summary_${targetset}_hq.txt > bybam/interval_summary_${targetset}_hq_ice.txt
+    grep -f ice.sids.grepready bybam/interval_summary_${targetset}_lq.txt > bybam/interval_summary_${targetset}_lq_ice.txt
+    grep -f agilent.sids.grepready bybam/interval_summary_${targetset}_hq.txt > bybam/interval_summary_${targetset}_hq_agilent.txt
+    grep -f agilent.sids.grepready bybam/interval_summary_${targetset}_lq.txt > bybam/interval_summary_${targetset}_lq_agilent.txt
+    grep -f h2.sids.grepready bybam/interval_summary_${targetset}_hq.txt > bybam/interval_summary_${targetset}_hq_h2.txt
+    grep -f h2.sids.grepready bybam/interval_summary_${targetset}_lq.txt > bybam/interval_summary_${targetset}_lq_h2.txt
+    grep -f hx.sids.grepready bybam/interval_summary_${targetset}_hq.txt > bybam/interval_summary_${targetset}_hq_hx.txt
+    grep -f hx.sids.grepready bybam/interval_summary_${targetset}_lq.txt > bybam/interval_summary_${targetset}_lq_hx.txt
+    
+    # take column means
+    cat bybam/interval_summary_${targetset}_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_ic_means.txt
+    cat bybam/interval_summary_${targetset}_lq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_lq_ic_means.txt
+    cat bybam/interval_summary_${targetset}_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_ag_means.txt
+    cat bybam/interval_summary_${targetset}_lq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_lq_ag_means.txt
+    cat bybam/interval_summary_${targetset}_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_h2_means.txt
+    cat bybam/interval_summary_${targetset}_lq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_lq_h2_means.txt
+    cat bybam/interval_summary_${targetset}_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_hx_means.txt
+    cat bybam/interval_summary_${targetset}_lq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_lq_hx_means.txt
+    
+    # transpose
+    cat is_${targetset}_hq_ic_means.txt | tr '\t' '\n' > is_${targetset}_hq_ic_means_t.txt
+    cat is_${targetset}_lq_ic_means.txt | tr '\t' '\n' > is_${targetset}_lq_ic_means_t.txt
+    cat is_${targetset}_hq_ag_means.txt | tr '\t' '\n' > is_${targetset}_hq_ag_means_t.txt
+    cat is_${targetset}_lq_ag_means.txt | tr '\t' '\n' > is_${targetset}_lq_ag_means_t.txt
+    cat is_${targetset}_hq_h2_means.txt | tr '\t' '\n' > is_${targetset}_hq_h2_means_t.txt
+    cat is_${targetset}_lq_h2_means.txt | tr '\t' '\n' > is_${targetset}_lq_h2_means_t.txt
+    cat is_${targetset}_hq_hx_means.txt | tr '\t' '\n' > is_${targetset}_hq_hx_means_t.txt
+    cat is_${targetset}_lq_hx_means.txt | tr '\t' '\n' > is_${targetset}_lq_hx_means_t.txt
+    
+    # check
+    wc -l is_${targetset}_hq_ic_means_t.txt
+    wc -l is_${targetset}_lq_ic_means_t.txt
+    wc -l is_${targetset}_hq_ag_means_t.txt
+    wc -l is_${targetset}_lq_ag_means_t.txt
+    wc -l is_${targetset}_hq_h2_means_t.txt
+    wc -l is_${targetset}_lq_h2_means_t.txt
+    wc -l is_${targetset}_hq_hx_means_t.txt
+    wc -l is_${targetset}_lq_hx_means_t.txt
+    # ok
+    
+    # paste together, with an appropriate header and first column
+    header_source=`ls bybam/*${targetset}*interval_summary | head -1`
+    cat $header_source | cut -f1 | tail -n +2 > is_${targetset}_interval_names.txt
+    echo -ne "\n" >> is_${targetset}_interval_names.txt # add one blank row to match the data
+    wc -l is_${targetset}_interval_names.txt
+    echo -e "interval\tICE.20_1\tICE.0_0\tAgilent.20_1\tAgilent.0_0\th2000.20_1\th2000.0_0\thX.20_1\thX.0_0" > is_${targetset}_all_means.txt
+    paste is_${targetset}_interval_names.txt is_${targetset}_hq_ic_means_t.txt is_${targetset}_lq_ic_means_t.txt is_${targetset}_hq_ag_means_t.txt is_${targetset}_lq_ag_means_t.txt is_${targetset}_hq_h2_means_t.txt is_${targetset}_lq_h2_means_t.txt is_${targetset}_hq_hx_means_t.txt is_${targetset}_lq_hx_means_t.txt >> is_${targetset}_all_means.txt
+done
 
 #### check on DepthOfCoverage jobs
 # 2014-06-11 09:65 check-in
