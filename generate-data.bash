@@ -724,7 +724,79 @@ cat bam.metadata.fixed | grep "HiSeq X" | cut -f1 > hX.snames
 grep -f hX.snames $arrayfam_postqc | awk '$5=="1" {print "M"} $5=="2" {print "F"}' | sort | uniq -c
      # 22 F
      # 56 M
+grep -f alldata.samples $arrayfam_postqc | awk '$5=="1" {print "M"} $5=="2" {print "F"}' | sort | uniq -c
+      # 1 F
+      # 5 M
 
 
-# final genotypic concordance comparison
+# final genotypic concordance comparison: ICE vs. X Ten, in the Gencode CDS.
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.ice.vs.xten.snp.gq30dp10.molt.out \
+            -e jobtemp/conc.ice.vs.xten.snp.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp wgs.xten.snp.sn.vcf.gz \
+              -eval exome.ice.snp.sn.vcf.gz  \
+              -moltenize \
+              -o ice.vs.xten.snp.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.ice.vs.xten.indel.gq30dp10.molt.out \
+            -e jobtemp/conc.ice.vs.xten.indel.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp wgs.xten.indel.sn.vcf.gz \
+              -eval exome.ice.indel.sn.vcf.gz  \
+              -moltenize \
+              -o ice.vs.xten.indel.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.agilent.vs.xten.snp.gq30dp10.molt.out \
+            -e jobtemp/conc.agilent.vs.xten.snp.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp wgs.xten.snp.sn.vcf.gz \
+              -eval exome.agilent.snp.sn.vcf.gz  \
+              -moltenize \
+              -o agilent.vs.xten.snp.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J conc -M 8000000 \
+            -o jobtemp/conc.agilent.vs.xten.indel.gq30dp10.molt.out \
+            -e jobtemp/conc.agilent.vs.xten.indel.gq30dp10.molt.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp wgs.xten.indel.sn.vcf.gz \
+              -eval exome.agilent.indel.sn.vcf.gz  \
+              -moltenize \
+              -o agilent.vs.xten.indel.gq30dp10.molt"
+
+cat ice.vs.xten.indel.gq30dp10.molt     | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
+cat agilent.vs.xten.indel.gq30dp10.molt | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
+
+
+
 

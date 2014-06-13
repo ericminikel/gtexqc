@@ -207,42 +207,48 @@ gc_chrbreaks = c(gc_chrbreaks,length(is_gc_chr))
 
 
 # mean interval depth by quality on each tech
-
-png('interval.means.ice.by.quality.png',width=1200,height=800)
-plot(is_be_means$ICE.0_0,is_be_means$ICE.20_1,pch='.',col=ecolor,
-     ylim=c(0,500),xlim=c(0,500),
-     xlab='Total depth, any quality',
-     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
-     main='Mean Broad Exome interval depth\nin ICE exomes by quality',
-     sub=paste('N =',sum(bm$tech=="ICE"),"exomes"))
-dev.off()
-
-png('interval.means.agilent.by.quality.png',width=1200,height=800)
-plot(is_be_means$Agilent.0_0,is_be_means$Agilent.20_1,pch='.',col=ecolor,
-     ylim=c(0,500),xlim=c(0,500),
-     xlab='Total depth, any quality',
-     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
-     main='Mean Broad Exome interval depth\nin Agilent exomes by quality',
-     sub=paste('N =',sum(bm$tech=="Agilent"),"exomes"))
-dev.off()
-
-png('interval.means.h2000.by.quality.png',width=1200,height=800)
-plot(is_be_means$h2000.0_0,is_be_means$h2000.20_1,pch='.',col=gcolor,
-     ylim=c(0,200),xlim=c(0,200),
-     xlab='Total depth, any quality',
-     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
-     main='Mean Broad Exome interval depth\nin HiSeq 2000 whole genomes by quality',
-     sub=paste('N =',sum(bm$tech=="HiSeq 2000"),"genomes"))
-dev.off()
-
-png('interval.means.hx.by.quality.png',width=1200,height=800)
-plot(is_be_means$hX.0_0,is_be_means$hX.20_1,pch='.',col=gcolor,
-     ylim=c(0,200),xlim=c(0,200),
-     xlab='Total depth, any quality',
-     ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
-     main='Mean Broad Exome interval depth\nin HiSeq X Ten whole genomes by quality',
-     sub=paste('N =',sum(bm$tech=="HiSeq X"),"genomes"))
-dev.off()
+for (target in unique(cp$targets)) {
+  if (target == "broadexome") {
+    is_table = is_be_means
+  } else if (target == "gencode_cds") {
+    is_table = is_gc_means
+  }
+  png(paste('interval.means.ice.by.quality.',target,'.png',sep=''),width=1200,height=800)
+  plot(is_table$ICE.0_0,is_table$ICE.20_1,pch='.',col=ecolor,
+       ylim=c(0,500),xlim=c(0,500),
+       xlab='Total depth, any quality',
+       ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+       main=paste('Mean ',fullname[target],' interval depth\nin ICE exomes by quality',sep=''),
+       sub=paste('N =',sum(bm$tech=="ICE"),"exomes"))
+  dev.off()
+  
+  png(paste('interval.means.agilent.by.quality.',target,'.png',sep=''),width=1200,height=800)
+  plot(is_table$Agilent.0_0,is_table$Agilent.20_1,pch='.',col=ecolor,
+       ylim=c(0,500),xlim=c(0,500),
+       xlab='Total depth, any quality',
+       ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+       main=paste('Mean ',fullname[target],' interval depth\nin Agilent exomes by quality',sep=''),
+       sub=paste('N =',sum(bm$tech=="Agilent"),"exomes"))
+  dev.off()
+  
+  png(paste('interval.means.h2000.by.quality.',target,'.png',sep=''),width=1200,height=800)
+  plot(is_table$h2000.0_0,is_table$h2000.20_1,pch='.',col=gcolor,
+       ylim=c(0,200),xlim=c(0,200),
+       xlab='Total depth, any quality',
+       ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+       main=paste('Mean ',fullname[target],' interval depth\nin HiSeq 2000 genomes by quality',sep=''),
+       sub=paste('N =',sum(bm$tech=="HiSeq 2000"),"genomes"))
+  dev.off()
+  
+  png(paste('interval.means.hx.by.quality.',target,'.png',sep=''),width=1200,height=800)
+  plot(is_table$hX.0_0,is_table$hX.20_1,pch='.',col=gcolor,
+       ylim=c(0,200),xlim=c(0,200),
+       xlab='Total depth, any quality',
+       ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
+       main=paste('Mean ',fullname[target],' interval depth\nin HiSeq X Ten genomes by quality',sep=''),
+       sub=paste('N =',sum(bm$tech=="HiSeq X"),"genomes"))
+  dev.off()
+}
 
 
 # plot across the genome
@@ -398,6 +404,8 @@ write.table(master_gc_table,"master_gc_table.txt",row.names=TRUE,col.names=TRUE,
 gcp_xten_array = read.table("wgs.xten.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
 gcp_2000_array = read.table("wgs.2000.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
 
+
+
 gcp_xten_array_table = acast(data=subset(gcp_xten_array, Comp_Genotype != "Mismatching_Alleles"),
       formula=Eval_Genotype ~ Comp_Genotype,
       value.var="Proportion")
@@ -409,4 +417,10 @@ gcp_2000_array_table = acast(data=subset(gcp_2000_array, Comp_Genotype != "Misma
 write.table(gcp_2000_array_table,"gcp_2000_array_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
 
 
-table(bm$tech)
+# is higher no call rate at hom ref sites in X Ten due to GQ and DP criteria???
+gcp_xten_array_noqc = read.table("gc.wgs.xten.vs.array.gencode_cds.bed.molt2.concordance.proportions",skip=3,header=TRUE)
+gcp_xten_array_noqc_table = acast(data=subset(gcp_xten_array_noqc, Comp_Genotype != "Mismatching_Alleles"),
+                             formula=Eval_Genotype ~ Comp_Genotype,
+                             value.var="Proportion")
+write.table(gcp_xten_array_noqc_table,"gcp_xten_array_noqc_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
+
