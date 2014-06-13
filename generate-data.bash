@@ -703,6 +703,28 @@ do
     done
 done
 
+fname=`ls *.moltgc | head -1`
+echo -en "comparison\t" > interval.concordance.summary
+cat $fname | grep -A 2 ^#:GATKTable:4 | tail -1 >> interval.concordance.summary
+for fname in *.moltgc
+do
+    echo -en $fname"\t" >> interval.concordance.summary
+    cat $fname | grep -A 3 ^#:GATKTable:4 | tail -1 >> interval.concordance.summary
+done
 
 
+
+# check sex of people in diff. data subsets
+# use sex in $arrayfam_postqc
+cat bam.metadata.fixed | grep "HiSeq 2000" | cut -f1 > h2000.snames
+grep -f h2000.snames $arrayfam_postqc | awk '$5=="1" {print "M"} $5=="2" {print "F"}' | sort | uniq -c
+     # 28 F
+     # 40 M
+cat bam.metadata.fixed | grep "HiSeq X" | cut -f1 > hX.snames
+grep -f hX.snames $arrayfam_postqc | awk '$5=="1" {print "M"} $5=="2" {print "F"}' | sort | uniq -c
+     # 22 F
+     # 56 M
+
+
+# final genotypic concordance comparison
 

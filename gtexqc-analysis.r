@@ -24,13 +24,13 @@ oldlty = 3 # dotted line for the older of the technologies
 hqcolor = '#000000' # black for high-quality coverage
 lqcolor = '#999999' # gray for all coverage incl low quality
 
-getk = function(ge) {
-  if (ge=="WES") {
+getk = function(ge_or_tech) {
+  if (ge_or_tech %in% c("WES","ICE","Agilent")) {
     return (ecolor)
-  } else if (ge=="WGS") {
+  } else if (ge_or_tech %in% c("WGS","HiSeq 2000","HiSeq X")) {
     return (gcolor)
   } else {
-    stop("invalid specification: should be WES or WGS")
+    stop("invalid specification - see getk() function")
   }
 }
 
@@ -69,7 +69,8 @@ wgs_snames = read.table("wgs.samples")$V1 # additional WGS samples
 # load means from interval-level data
 is_be_means = read.table("is_broadexome.bed_all_means.txt",header=TRUE)
 is_gc_means = read.table("is_gencode_cds.bed_all_means.txt",header=TRUE)
-
+is_means_meta=data.frame(tech=c("","ICE","ICE","Agilent","Agilent","HiSeq 2000","HiSeq 2000","HiSeq X","HiSeq X"),
+                            qual=c("","20_1","0_0","20_1","0_0","20_1","0_0","20_1","0_0"))
 
 #### cumulative proportions plots
 cp$sname = bm$sname[match(cp$sid,bm$sid)]
@@ -108,7 +109,7 @@ for (target in unique(cp$targets)) {
 # cumulative coverage plot for the 6 individuals that have three sequencing datasets
 for (target in unique(cp$targets)) {
   for (qual in unique(cp$qual)) {
-    png(paste('cumul.cov.',target,'.',qual,'b6.indivs.png',sep=''),width=1200,height=800)
+    png(paste('cumul.cov.',target,'.',qual,'.b6.indivs.png',sep=''),width=1200,height=800)
     plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
      xlab='Depth',ylab='Proportion of target covered at depth',
      main=paste('Cumulative depth of coverage\nover',fullname[target],"\n",fullname[qual]),
@@ -123,21 +124,35 @@ for (target in unique(cp$targets)) {
   }
 }
 
-# cumulative coverage plot of HiSeq 2000 vs. X Ten
+median(cp$gte_10[cp$qual=="20_1" & cp$tech=="HiSeq X" & cp$targets=="gencode_cds" & b6])
+median(cp$gte_10[cp$qual=="20_1" & cp$tech=="ICE" & cp$targets=="gencode_cds" & b6])
+median(cp$gte_10[cp$qual=="20_1" & cp$tech=="Agilent" & cp$targets=="gencode_cds" & b6])
 
-counts = table(cp$tech[hq & be & cp$ge=='WGS'])
-paste(counts, names(counts))
-# WGS 2000 vs. X Ten
-plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
-     xlab='Depth',ylab='Proportion of target covered at depth',
-     main='Cumulative depth of coverage\nover Broad Exome (GATK bundle)',
-     sub=paste('N = ',paste(counts, names(counts),collapse=',')))
-axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
-for (row in which(hq & be & cp$ge=='WGS')) {
-  points(cpmat[row,],type='l',lwd=2,
-         lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
+median(cp$gte_20[cp$qual=="20_1" & cp$tech=="HiSeq X" & cp$targets=="gencode_cds" & b6])
+median(cp$gte_20[cp$qual=="20_1" & cp$tech=="ICE" & cp$targets=="gencode_cds" & b6])
+median(cp$gte_20[cp$qual=="20_1" & cp$tech=="Agilent" & cp$targets=="gencode_cds" & b6])
+
+
+# cumulative coverage plot of HiSeq 2000 vs. X Ten
+for (target in unique(cp$targets)) {
+  for (qual in unique(cp$qual)) {
+    png(paste('cumul.cov.',target,'.',qual,'.wgs.png',sep=''),width=1200,height=800)
+    counts = table(cp$tech[cp$qual==qual & cp$targets==target & cp$ge=='WGS'])
+    paste(counts, names(counts))
+    # WGS 2000 vs. X Ten
+    plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
+         xlab='Depth',ylab='Proportion of target covered at depth',
+         main=paste('Cumulative depth of coverage\nover ',fullname[target],'\n',fullname[qual],sep=''),
+         sub=paste('N = ',paste(counts, names(counts),collapse=',')))
+    axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
+    for (row in which(cp$qual==qual & cp$targets==target & cp$ge=='WGS')) {
+      points(cpmat[row,],type='l',lwd=2,
+             lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
+    }
+    legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4],lwd=2)
+    dev.off() 
+  }
 }
-legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4],lwd=2)
 
 # separate them for greater visibility
 plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
@@ -182,14 +197,20 @@ legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4]
 #### interval summary stuff
 is_be_names = is_be_means[,"interval"]
 is_be_chr = sapply(strsplit(is_be_names,":"),"[[",1)
-chrbreaks = which(!duplicated(is_be_chr))
-chrbreaks = c(chrbreaks,length(is_be_chr))
+be_chrbreaks = which(!duplicated(is_be_chr))
+be_chrbreaks = c(be_chrbreaks,length(is_be_chr))
+
+is_gc_names = is_gc_means[,"interval"]
+is_gc_chr = sapply(strsplit(is_gc_names,":"),"[[",1)
+gc_chrbreaks = which(!duplicated(is_gc_chr))
+gc_chrbreaks = c(gc_chrbreaks,length(is_gc_chr))
 
 
 # mean interval depth by quality on each tech
+
 png('interval.means.ice.by.quality.png',width=1200,height=800)
 plot(is_be_means$ICE.0_0,is_be_means$ICE.20_1,pch='.',col=ecolor,
-     ylim=c(0,200),xlim=c(0,200),
+     ylim=c(0,500),xlim=c(0,500),
      xlab='Total depth, any quality',
      ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
      main='Mean Broad Exome interval depth\nin ICE exomes by quality',
@@ -198,7 +219,7 @@ dev.off()
 
 png('interval.means.agilent.by.quality.png',width=1200,height=800)
 plot(is_be_means$Agilent.0_0,is_be_means$Agilent.20_1,pch='.',col=ecolor,
-     ylim=c(0,200),xlim=c(0,200),
+     ylim=c(0,500),xlim=c(0,500),
      xlab='Total depth, any quality',
      ylab='Depth with BQ ≥ 20, MAPQ ≥ 1',
      main='Mean Broad Exome interval depth\nin Agilent exomes by quality',
@@ -223,13 +244,32 @@ plot(is_be_means$hX.0_0,is_be_means$hX.20_1,pch='.',col=gcolor,
      sub=paste('N =',sum(bm$tech=="HiSeq X"),"genomes"))
 dev.off()
 
+
+# plot across the genome
+for (tech in unique(bm$tech)) {
+  qual = "20_1"
+  png(paste('chrom.coord.mean.cov.',tech,'.20_1.png',sep=''),width=1200,height=800)
+      usecol = which(is_means_meta$tech==tech & is_means_meta$qual==qual)
+      par(mar=c(6,6,4,4))
+      plot(1:dim(is_gc_means)[1],is_gc_means[,usecol],pch='.',col=getk(tech),
+           xaxt='n',xaxs='i',yaxs='i',yaxt='n',ylim=c(0,200),
+           ylab='Mean depth',
+           xlab='Interval',
+           main=paste('Mean depth by Gencode CDS interval\n',fullname[tech]," ",fullname[qual],sep=''))
+      abline(v=gc_chrbreaks,col='red')
+      axis(side=1,at=midpoints(gc_chrbreaks),labels=unique(is_gc_chr),lty=0,cex.axis=.8)
+      axis(side=2,at=c(50,100,150,200),labels=c(50,100,150,200),cex.axis=.8)
+      dev.off()
+}
+
+
 # mean interval depth between techs
-png('interval.means.ice.vs.agilent.hq.png',width=1200,height=800)
+png('interval.means.ice.vs.agilent.20_1.broadexome.png',width=1200,height=800)
 plot(is_be_means$Agilent.20_1,is_be_means$ICE.20_1,pch='.',col=ecolor,
      ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
      xlab='Agilent depth',
      ylab='ICE depth',
-     main='Mean Broad Exome interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nAgilent vs. ICE',
+     main='Mean BroadExome interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nAgilent vs. ICE',
      sub=paste('N =',sum(bm$tech=="ICE")," ICE exomes vs.",sum(bm$tech=="Agilent")," Agilent exomes"))
 m = lm(is_be_means$ICE.20_1 ~ is_be_means$Agilent.20_1)
 rho = sqrt(summary(m)$adj.r.squared)
@@ -237,7 +277,20 @@ mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.
 abline(m,col='red')
 dev.off()
 
-png('interval.means.h2.vs.hx.hq.png',width=1200,height=800)
+png('interval.means.ice.vs.agilent.20_1.gencode_cds.png',width=1200,height=800)
+plot(is_gc_means$Agilent.20_1,is_gc_means$ICE.20_1,pch='.',col=ecolor,
+     ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
+     xlab='Agilent depth',
+     ylab='ICE depth',
+     main='Mean Gencode CDS interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nAgilent vs. ICE',
+     sub=paste('N =',sum(bm$tech=="ICE")," ICE exomes vs.",sum(bm$tech=="Agilent")," Agilent exomes"))
+m = lm(is_gc_means$ICE.20_1 ~ is_gc_means$Agilent.20_1)
+rho = sqrt(summary(m)$adj.r.squared)
+mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
+abline(m,col='red')
+dev.off()
+
+png('interval.means.h2.vs.hx.20_1.broadexome.png',width=1200,height=800)
 plot(is_be_means$h2000.20_1,is_be_means$hX.20_1,pch='.',col=gcolor,
      ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
      xlab='HiSeq 2000 depth',
@@ -250,46 +303,97 @@ mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.
 abline(m,col='red')
 dev.off()
 
-# which genomic regions account for differences in coverage?
-hx_problem_interval_idx = which(is_be_means$hX.20_1 < 20 & is_be_means$hX.20_1 < is_be_means$h2000.20_1)
-hx_depth_loss = rep(0.0,dim(is_be_means)[1])
-hx_depth_loss[hx_problem_interval_idx] =  -(is_be_means$h2000.20_1[hx_problem_interval_idx] - is_be_means$hX.20_1[hx_problem_interval_idx])/is_be_means$h2000.20_1[hx_problem_interval_idx]
-proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_be_means)[1]
-sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
-png('depth.loss.regions.xten.2000.png',width=1200,height=800)
-par(mar=c(6,6,4,4))
-plot(1:dim(is_be_means)[1],hx_depth_loss,pch=20,col=gcolor,
-     xaxt='n',xaxs='i',yaxs='i',yaxt='n',
-     ylab='% loss of depth in HiSeq X Ten\ncompared to HiSeq 2000',
-     xlab='Broad Exome interval',
-     main='Intervals where HiSeq X Ten loses high-quality depth compared to HiSeq 2000\nand X Ten has mean depth < 20',
-     sub=sub)
-abline(v=chrbreaks,col='red')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
-axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
+png('interval.means.h2.vs.hx.20_1.gencode_cds.png',width=1200,height=800)
+plot(is_gc_means$h2000.20_1,is_gc_means$hX.20_1,pch='.',col=gcolor,
+     ylim=c(0,200),xlim=c(0,200),xaxs='i',yaxs='i',
+     xlab='HiSeq 2000 depth',
+     ylab='HiSeq X Ten depth',
+     main='Mean Gencode CDS interval depth\nat BQ ≥ 20 MAPQ ≥ 1\nHiSeq 2000 vs. X Ten',
+     sub=paste('N =',sum(bm$tech=="HiSeq 2000")," HiSeq 2000 whole genomes vs.",sum(bm$tech=="HiSeq X")," HiSeq X Ten whole genomes"))
+m = lm(is_gc_means$hX.20_1 ~ is_gc_means$h2000.20_1)
+rho = sqrt(summary(m)$adj.r.squared)
+mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
+abline(m,col='red')
 dev.off()
 
-hx_problem_interval_idx = which(is_be_means$ICE.20_1 < 20 & is_be_means$ICE.20_1 < is_be_means$Agilent.20_1)
-hx_depth_loss = rep(0.0,dim(is_be_means)[1])
-hx_depth_loss[hx_problem_interval_idx] =  -(is_be_means$Agilent.20_1[hx_problem_interval_idx] - is_be_means$ICE.20_1[hx_problem_interval_idx])/is_be_means$Agilent.20_1[hx_problem_interval_idx]
-proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_be_means)[1]
+
+
+# which genomic regions account for differences in coverage?
+hx_problem_interval_idx = which(is_gc_means$ICE.20_1 < 20 & is_gc_means$ICE.20_1 < is_gc_means$Agilent.20_1)
+hx_depth_loss = rep(0.0,dim(is_gc_means)[1])
+hx_depth_loss[hx_problem_interval_idx] =  -(is_gc_means$Agilent.20_1[hx_problem_interval_idx] - is_gc_means$ICE.20_1[hx_problem_interval_idx])/is_gc_means$Agilent.20_1[hx_problem_interval_idx]
+proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_gc_means)[1]
 sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
-png('depth.loss.regions.ice.agilent.png',width=1200,height=800)
+png('depth.loss.regions.ice.agilent.20_1.png',width=1200,height=800)
 par(mar=c(6,6,4,4))
-plot(1:dim(is_be_means)[1],hx_depth_loss,pch=20,col=ecolor,
+plot(1:dim(is_gc_means)[1],hx_depth_loss,pch=20,col=ecolor,
      xaxt='n',xaxs='i',yaxs='i',yaxt='n',
      ylab='% loss of depth in ICE\ncompared to Agilent',
-     xlab='Broad Exome interval',
+     xlab='Gencode CDS interval',
      main='Intervals where ICE loses high-quality depth compared to Agilent\nand ICE has mean depth < 20',
      sub=sub)
-abline(v=chrbreaks,col='red')
-axis(side=1,at=midpoints(chrbreaks),labels=unique(is_be_chr),lty=0,cex.axis=.8)
+abline(v=gc_chrbreaks,col='red')
+axis(side=1,at=midpoints(gc_chrbreaks),labels=unique(is_gc_chr),lty=0,cex.axis=.8)
 axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
 dev.off()
 
+
+hx_problem_interval_idx = which(is_gc_means$hX.20_1 < 20 & is_gc_means$hX.20_1 < is_gc_means$h2000.20_1)
+hx_depth_loss = rep(0.0,dim(is_gc_means)[1])
+hx_depth_loss[hx_problem_interval_idx] =  -(is_gc_means$h2000.20_1[hx_problem_interval_idx] - is_gc_means$hX.20_1[hx_problem_interval_idx])/is_gc_means$h2000.20_1[hx_problem_interval_idx]
+proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_gc_means)[1]
+sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
+png('depth.loss.regions.xten.2000.20_1.png',width=1200,height=800)
+par(mar=c(6,6,4,4))
+plot(1:dim(is_gc_means)[1],hx_depth_loss,pch=20,col=gcolor,
+     xaxt='n',xaxs='i',yaxs='i',yaxt='n',
+     ylab='% loss of depth in HiSeq X Ten\ncompared to HiSeq 2000',
+     xlab='Gencode CDS interval',
+     main='Intervals where HiSeq X Ten loses high-quality depth compared to HiSeq 2000\nand X Ten has mean depth < 20',
+     sub=sub)
+abline(v=gc_chrbreaks,col='red')
+axis(side=1,at=midpoints(gc_chrbreaks),labels=unique(is_gc_chr),lty=0,cex.axis=.8)
+axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
+dev.off()
+
+
+# apply adjustment of +11% to X chromosome for the different male-female ratio in the X Ten individuals
+is_gc_means_hX_20_1_adjusted = is_gc_means$hX.20_1
+is_gc_means_hX_20_1_adjusted[is_gc_chr=='X'] = is_gc_means_hX_20_1_adjusted[is_gc_chr=='X']*(1.42/1.28)
+hx_problem_interval_idx = which(is_gc_means_hX_20_1_adjusted< 20 & is_gc_means_hX_20_1_adjusted < is_gc_means$h2000.20_1)
+hx_depth_loss = rep(0.0,dim(is_gc_means)[1])
+hx_depth_loss[hx_problem_interval_idx] =  -(is_gc_means$h2000.20_1[hx_problem_interval_idx] - is_gc_means_hX_20_1_adjusted[hx_problem_interval_idx])/is_gc_means$h2000.20_1[hx_problem_interval_idx]
+proportion_intervals_problematic = length(hx_problem_interval_idx) / dim(is_gc_means)[1]
+sub = paste('These "problem" intervals represent ',formatC(proportion_intervals_problematic*100,digits=2),"% of intervals",sep="")
+png('depth.loss.regions.xten.2000.20_1.sex_adjusted.png',width=1200,height=800)
+par(mar=c(6,6,4,4))
+plot(1:dim(is_gc_means)[1],hx_depth_loss,pch=20,col=gcolor,
+     xaxt='n',xaxs='i',yaxs='i',yaxt='n',
+     ylab='% loss of depth in HiSeq X Ten\ncompared to HiSeq 2000',
+     xlab='Gencode CDS interval',
+     main='Intervals where HiSeq X Ten loses high-quality depth compared to HiSeq 2000\nand X Ten has mean depth < 20\nAdjusted for sex ratio',
+     sub=sub)
+abline(v=gc_chrbreaks,col='red')
+axis(side=1,at=midpoints(gc_chrbreaks),labels=unique(is_gc_chr),lty=0,cex.axis=.8)
+axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
+dev.off()
 
 #### genotypic concordance
 
+# summary
+genomewide_gc = read.table("all.concordance.summary",header=TRUE,row.names=1)
+genomewide_gc = genomewide_gc[!(grepl("exchip",rownames(genomewide_gc))),-1]
+interval_gc = read.table("interval.concordance.summary",header=TRUE,row.names=1)
+broadexome_gc = interval_gc[grepl("broadexome",rownames(interval_gc)),-1]
+gencode_gc  = interval_gc[grepl("gencode",rownames(interval_gc)),-1]
+colnames(genomewide_gc) = paste('genomewide.',colnames(genomewide_gc),sep='')
+colnames(broadexome_gc) = paste('broadexome.',colnames(broadexome_gc),sep='')
+colnames(gencode_gc) = paste('gencode.',colnames(gencode_gc),sep='')
+master_gc_table = rbind(t(genomewide_gc),t(broadexome_gc),t(gencode_gc))
+
+write.table(master_gc_table,"master_gc_table.txt",row.names=TRUE,col.names=TRUE,quote=FALSE)
+
+# detailed
 # tables for overall WGS concordance with 2.5M array
 gcp_xten_array = read.table("wgs.xten.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
 gcp_2000_array = read.table("wgs.2000.vs.array.gq30dp10.molt.summary.concordance.proportions",skip=3,header=TRUE)
@@ -303,3 +407,6 @@ gcp_2000_array_table = acast(data=subset(gcp_2000_array, Comp_Genotype != "Misma
                              formula=Eval_Genotype ~ Comp_Genotype,
                              value.var="Proportion")
 write.table(gcp_2000_array_table,"gcp_2000_array_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
+
+
+table(bm$tech)
