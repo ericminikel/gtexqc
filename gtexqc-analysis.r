@@ -155,29 +155,37 @@ for (target in unique(cp$targets)) {
 }
 
 # separate them for greater visibility
+qual = "20_1"
+ge = "WGS"
+target = "gencode_cds"
+
+png('cumul.cov.h2000.gencode_cds.20_1.png',width=1200,height=800)
+counts = table(cp$tech[cp$tech=='HiSeq 2000' & cp$qual==qual & cp$targets==target & cp$ge==ge])
 plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
      xlab='Depth',ylab='Proportion of target covered at depth',
-     main='Cumulative depth of coverage\nover Broad Exome (GATK bundle)',
+     main='Cumulative depth of coverage\nover Gencode CDS intervals',
      sub=paste('N = ',paste(counts, names(counts),collapse=',')))
 axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
-for (row in which(hq & be & cp$ge=='WGS' & cp$tech=='HiSeq 2000')) {
+for (row in which(cp$tech=='HiSeq 2000' & cp$qual==qual & cp$targets==target & cp$ge==ge)) {
   points(cpmat[row,],type='l',lwd=2,
          lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
 }
-legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4],lwd=2)
+legend("bottomleft",legtable$text[4],col=legtable$k[4],lty=legtable$lty[4],lwd=2)
+dev.off()
 
-
+png('cumul.cov.hx.gencode_cds.20_1.png',width=1200,height=800)
+counts = table(cp$tech[cp$tech=='HiSeq X' & cp$qual==qual & cp$targets==target & cp$ge==ge])
 plot(NA,NA,xlim=c(0,80),ylim=c(0,1),xaxs='i',yaxs='i',yaxt='n',
      xlab='Depth',ylab='Proportion of target covered at depth',
-     main='Cumulative depth of coverage\nover Broad Exome (GATK bundle)',
+     main='Cumulative depth of coverage\nover Gencode CDS intervals',
      sub=paste('N = ',paste(counts, names(counts),collapse=',')))
 axis(side=2,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""),cex=.8)
-for (row in which(hq & be & cp$ge=='WGS' & cp$tech=='HiSeq X')) {
+for (row in which(cp$tech=='HiSeq X' & cp$qual==qual & cp$targets==target & cp$ge==ge)) {
   points(cpmat[row,],type='l',lwd=2,
          lty=getlty(cp$tech[row]),col=getk(cp$ge[row]))
 }
-legend("bottomleft",legtable$text[3:4],col=legtable$k[3:4],lty=legtable$lty[3:4],lwd=2)
-
+legend("bottomleft",legtable$text[3],col=legtable$k[3],lty=legtable$lty[3],lwd=2)
+dev.off()
 
 # zoom in
 plot(NA,NA,xlim=c(0,20),ylim=c(.8,1),xaxs='i',yaxs='i',yaxt='n',
@@ -280,7 +288,7 @@ plot(is_be_means$Agilent.20_1,is_be_means$ICE.20_1,pch='.',col=ecolor,
 m = lm(is_be_means$ICE.20_1 ~ is_be_means$Agilent.20_1)
 rho = sqrt(summary(m)$adj.r.squared)
 mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
-abline(m,col='red')
+abline(a=0,b=1,col='#000000')
 dev.off()
 
 png('interval.means.ice.vs.agilent.20_1.gencode_cds.png',width=1200,height=800)
@@ -293,7 +301,7 @@ plot(is_gc_means$Agilent.20_1,is_gc_means$ICE.20_1,pch='.',col=ecolor,
 m = lm(is_gc_means$ICE.20_1 ~ is_gc_means$Agilent.20_1)
 rho = sqrt(summary(m)$adj.r.squared)
 mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
-abline(m,col='red')
+abline(a=0,b=1,col='#000000')
 dev.off()
 
 png('interval.means.h2.vs.hx.20_1.broadexome.png',width=1200,height=800)
@@ -306,7 +314,7 @@ plot(is_be_means$h2000.20_1,is_be_means$hX.20_1,pch='.',col=gcolor,
 m = lm(is_be_means$hX.20_1 ~ is_be_means$h2000.20_1)
 rho = sqrt(summary(m)$adj.r.squared)
 mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
-abline(m,col='red')
+abline(a=0,b=1,col='#000000')
 dev.off()
 
 png('interval.means.h2.vs.hx.20_1.gencode_cds.png',width=1200,height=800)
@@ -319,7 +327,7 @@ plot(is_gc_means$h2000.20_1,is_gc_means$hX.20_1,pch='.',col=gcolor,
 m = lm(is_gc_means$hX.20_1 ~ is_gc_means$h2000.20_1)
 rho = sqrt(summary(m)$adj.r.squared)
 mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.8)
-abline(m,col='red')
+abline(a=0,b=1,col='#000000')
 dev.off()
 
 

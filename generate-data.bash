@@ -796,7 +796,155 @@ bsub -q bweek -P $RANDOM -J conc -M 8000000 \
 
 cat ice.vs.xten.indel.gq30dp10.molt     | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
 cat agilent.vs.xten.indel.gq30dp10.molt | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
+cat ice.vs.xten.snp.gq30dp10.molt     | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
+cat agilent.vs.xten.snp.gq30dp10.molt | grep -A 2 ^#:GATKTable:GenotypeConcordance_Summary
 
 
 
+java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -comp array.sn.vcf.gz \
+              -eval wgs.xten.snp.sn.vcf.gz \
+              -moltenize \
+              -o gc.wgs.xten.vs.array.gencode_cds.bed.molt2
+
+cat gc.wgs.xten.vs.array.gencode_cds.bed.molt2 | less
+
+cat gc.wgs.xten.vs.array.gencode_cds.bed.molt2 | head -23 > gc.wgs.xten.vs.array.gencode_cds.bed.molt2.concordance.proportions
+
+
+
+#### adding ICE v. XTen analysis with N>6
+
+# 1. find individuals with both ICE and X ten
+
+cat $wesmeta | grep ICE | wc -l
+# 351
+cat $wgsmeta | grep "HiSeq X" | wc -l
+# 85
+
+cat $wesmeta | grep ICE | awk -F"\t" '{print $25}' | sort > ice.exome.snames
+cat $wgsmeta | grep "HiSeq X" | awk -F"\t" '{print $25}' | sort > hx.genome.snames
+comm -12 ice.exome.snames hx.genome.snames | wc -l
+# 13
+
+cat $wesmeta | grep Agilent | awk -F"\t" '{print $25}' | sort > agilent.exome.snames
+comm -12 agilent.exome.snames hx.genome.snames > ag-hx.snames
+wc -l ag-hx.snames
+# 78
+
+# there are 85 HiSeq X Ten genomes. 78 have Agilent, 13 have ICE, 6 have both
+
+# grep -f ag-hx.snames $wesmeta | grep Agilent   | awk -F"\t" '{print $25"\t"$1"\tWES\t"$38"\t"$31}' >  ag-hx.metadata
+# grep -f ag-hx.snames $wgsmeta | grep "HiSeq X" | awk -F"\t" '{print $25"\t"$1"\tWES\t"$38"\t"$31}' >> ag-hx.metadata
+
+grep -f ag-hx.snames exome.supp.cols
+
+grep -f alldata.samples $wesmeta | awk -F"\t" '{print $25"\t"$1"\tWES\t"$38"\t"$31}' > bam.metadata
+# grab N = 140 whole genomes, on HiSeq 2000 or X Ten
+grep -f wgs.samples $wgsmeta | awk -F"\t" '{print $25"\t"$1"\tWGS\t"$38"\t"$31}' >> bam.metadata
+wc -l bam.metadata # 152
+
+grep -f ag-hx.snames exome.snp.cols | grep -v 1587 | sort > ag-hx.agilent.cols
+grep -f ag-hx.snames wgs.cols | sort > ag-hx.xten.cols
+comm -12 ag-hx.xten.cols ag-hx.agilent.cols > ag-hx.use.cols
+# 72! awesome, they *already* have the same IDs.
+
+# subset to only these 72 individuals
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.exome.agilent.snp.out \
+        -e jobtemp/ag-hx.exome.agilent.snp.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $exomesnpvcf \
+             -sf ag-hx.use.cols \
+             -env \
+             -o ag-hx.exome.agilent.snp.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.exome.agilent.indel.out \
+        -e jobtemp/ag-hx.exome.agilent.indel.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $exomeindelvcf \
+             -sf ag-hx.use.cols \
+             -env \
+             -o ag-hx.exome.agilent.indel.vcf"
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.wgs.xten.indel.out \
+        -e jobtemp/ag-hx.wgs.xten.indel.err \
+        "java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $wgsvcf \
+             -selectType INDEL \
+             -sf ag-hx.use.cols \
+             -env \
+             -o ag-hx.wgs.xten.indel.vcf"
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.wgs.xten.snp.out \
+        -e jobtemp/ag-hx.wgs.xten.snp.err \
+        "java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $wgsvcf \
+             -selectType SNP \
+             -sf ag-hx.use.cols \
+             -env \
+             -o ag-hx.wgs.xten.snp.vcf"
+
+# ABOVE have been submitted as of 4:45p on June 13, 2014
+# next do the below.
+
+
+# bgzip and tabix the VCFs.
+for fname in ag-hx.*snp.vcf
+do
+    bsub -q bhour -W 4:00 -P $RANDOM -J bgztb -M 8000000 \
+        -o jobtemp/$fname.bgzip.tabix.out \
+        -e jobtemp/$fname.bgzip.tabix.err \
+        "bgzip $fname; tabix $fname.gz"
+done
+
+
+
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.xten.vs.agilent.indel.out \
+        -e jobtemp/ag-hx.xten.vs.agilent.indel.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.exome.agilent.indel.vcf.gz \
+              -eval ag-hx.wgs.xten.indel.vcf.gz  \
+              -moltenize \
+              -o ag-hx.xten.vs.agilent.indel.gq30dp10.molt"
+
+# next need tosubmit this:
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.xten.vs.agilent.snp.out \
+        -e jobtemp/ag-hx.xten.vs.agilent.snp.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.exome.agilent.snp.vcf.gz \
+              -eval ag-hx.wgs.xten.snp.vcf.gz  \
+              -moltenize \
+              -o ag-hx.xten.vs.agilent.snp.gq30dp10.molt"
 
