@@ -899,9 +899,6 @@ bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
              -env \
              -o ag-hx.wgs.xten.snp.vcf"
 
-# ABOVE have been submitted as of 4:45p on June 13, 2014
-# next do the below.
-
 
 # bgzip and tabix the VCFs.
 for fname in ag-hx.*snp.vcf
@@ -947,4 +944,171 @@ bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
               -eval ag-hx.wgs.xten.snp.vcf.gz  \
               -moltenize \
               -o ag-hx.xten.vs.agilent.snp.gq30dp10.molt"
+
+
+# now switch with X Ten as standard and Agilent being evaluted:
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.agilent.vs.xten.indel.out \
+        -e jobtemp/ag-hx.agilent.vs.xten.indel.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.wgs.xten.indel.vcf.gz \
+              -eval ag-hx.exome.agilent.indel.vcf.gz \
+              -moltenize \
+              -o ag-hx.agilent.vs.xten.indel.gq30dp10.molt"
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.agilent.vs.xten.snp.out \
+        -e jobtemp/ag-hx.agilent.vs.xten.snp.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.wgs.xten.snp.vcf.gz \
+              -eval ag-hx.exome.agilent.snp.vcf.gz \
+              -moltenize \
+              -o ag-hx.agilent.vs.xten.snp.gq30dp10.molt"
+
+
+# now same with HiSeq 2000
+
+
+cat $wgsmeta | grep "HiSeq 2000" | wc -l
+# 80
+cat $wgsmeta | grep "HiSeq 2000" | awk -F"\t" '{print $25}' | sort > h2.genome.snames
+comm -12 agilent.exome.snames h2.genome.snames > ag-h2.snames
+# 71
+
+grep -f ag-h2.snames exome.snp.cols | grep -v 1587 | sort > ag-h2.agilent.cols
+grep -f ag-h2.snames wgs.cols | sort > ag-h2.2000.cols
+comm -12 ag-h2.2000.cols ag-h2.agilent.cols > ag-h2.use.cols1
+wc -l ag-h2.use.cols1
+# 71. for simplicity let's keep only the 68 from the main analysis
+grep -f wgs.samples ag-h2.use.cols1 > ag-h2.use.cols
+wc -l ag-h2.use.cols
+# 68
+
+# subset to only these 72 individuals
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.exome.agilent.snp.out \
+        -e jobtemp/ag-h2.exome.agilent.snp.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $exomesnpvcf \
+             -sf ag-h2.use.cols \
+             -env \
+             -o ag-h2.exome.agilent.snp.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.exome.agilent.indel.out \
+        -e jobtemp/ag-h2.exome.agilent.indel.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $exomeindelvcf \
+             -sf ag-h2.use.cols \
+             -env \
+             -o ag-h2.exome.agilent.indel.vcf"
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.wgs.2000.indel.out \
+        -e jobtemp/ag-h2.wgs.2000.indel.err \
+        "java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $wgsvcf \
+             -selectType INDEL \
+             -sf ag-h2.use.cols \
+             -env \
+             -o ag-h2.wgs.2000.indel.vcf"
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.wgs.2000.snp.out \
+        -e jobtemp/ag-h2.wgs.2000.snp.err \
+        "java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -V $wgsvcf \
+             -selectType SNP \
+             -sf ag-h2.use.cols \
+             -env \
+             -o ag-h2.wgs.2000.snp.vcf"
+
+# NEXT DO:
+
+# bgzip and tabix the VCFs.
+for fname in ag-h2.*snp.vcf
+do
+    bsub -q bhour -W 4:00 -P $RANDOM -J bgztb -M 8000000 \
+        -o jobtemp/$fname.bgzip.tabix.out \
+        -e jobtemp/$fname.bgzip.tabix.err \
+        "bgzip $fname; tabix $fname.gz"
+done
+
+# AND THEN:
+
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.2000.vs.agilent.indel.out \
+        -e jobtemp/ag-h2.2000.vs.agilent.indel.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-h2.exome.agilent.indel.vcf.gz \
+              -eval ag-h2.wgs.2000.indel.vcf.gz  \
+              -moltenize \
+              -o ag-h2.2000.vs.agilent.indel.gq30dp10.molt"
+
+# next need tosubmit this:
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.2000.vs.agilent.snp.out \
+        -e jobtemp/ag-h2.2000.vs.agilent.snp.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-h2.exome.agilent.snp.vcf.gz \
+              -eval ag-h2.wgs.2000.snp.vcf.gz  \
+              -moltenize \
+              -o ag-h2.2000.vs.agilent.snp.gq30dp10.molt"
+
+
+# GC content of Gencode intervals, to see if this is correlated with
+# loss of coverage in X Ten vs. 2000
+java -Xmx8g -jar $gatkjar \
+   -T GCContentByInterval \
+   -R $b37ref \
+   -L gencode_cds.bed \
+   -o gencode_cds.gccontent.txt
+
+# compare the MIXED sites to the 2.5M array sites
+bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/wgs.mixed.vcf.out \
+        -e jobtemp/wgs.mixed.vcf.err \
+"java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T SelectVariants \
+              -V $wgsvcf \
+              -selectType MIXED \
+              -o wgs.mixed.only.vcf"
+
 

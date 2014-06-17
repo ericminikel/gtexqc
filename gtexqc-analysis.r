@@ -71,6 +71,8 @@ is_be_means = read.table("is_broadexome.bed_all_means.txt",header=TRUE)
 is_gc_means = read.table("is_gencode_cds.bed_all_means.txt",header=TRUE)
 is_means_meta=data.frame(tech=c("","ICE","ICE","Agilent","Agilent","HiSeq 2000","HiSeq 2000","HiSeq X","HiSeq X"),
                             qual=c("","20_1","0_0","20_1","0_0","20_1","0_0","20_1","0_0"))
+gencode_gc_content = read.table("gencode_cds.gccontent.txt")
+colnames(gencode_gc_content) = c("interval","gc")
 
 #### cumulative proportions plots
 cp$sname = bm$sname[match(cp$sid,bm$sid)]
@@ -89,6 +91,28 @@ lq = cp$qual == '0_0'
 gc = cp$targets == 'gencode_cds'
 be = cp$targets == 'broadexome'
 cpmat = as.matrix(cp[,4:84])
+
+# histogram of 2000 vs. X Ten
+png('hist.hx.gencode_cds.coverage.png',width=600,height=400)
+hist(cp$meancov[hq & gc & cp$tech=="HiSeq X"],xlim=c(0,100),col=gcolor,main='Mean coverage of Gencode CDS in HiSeq X Ten genomes')
+dev.off()
+png('hist.h2.gencode_cds.coverage.png',width=600,height=400)
+hist(cp$meancov[hq & gc & cp$tech=="HiSeq 2000"],xlim=c(0,100),col=gcolor,main='Mean coverage of Gencode CDS in HiSeq 2000 genomes')
+dev.off()
+
+mean(cp$meancov[hq & gc & cp$tech=="HiSeq X"])
+sd(cp$meancov[hq & gc & cp$tech=="HiSeq X"])
+mean(cp$meancov[hq & gc & cp$tech=="HiSeq 2000"])
+sd(cp$meancov[hq & gc & cp$tech=="HiSeq 2000"])
+
+mean(cp$meancov[lq & gc & cp$tech=="HiSeq X"])
+sd(cp$meancov[lq & gc & cp$tech=="HiSeq X"])
+mean(cp$meancov[lq & gc & cp$tech=="HiSeq 2000"])
+sd(cp$meancov[lq & gc & cp$tech=="HiSeq 2000"])
+
+
+min(cp$meancov[hq & gc & cp$tech=="HiSeq X"])
+min(cp$meancov[hq & gc & cp$tech=="HiSeq 2000"])
 
 # mean coverage boxplots
 for (target in unique(cp$targets)) {
@@ -275,7 +299,9 @@ for (tech in unique(bm$tech)) {
       axis(side=2,at=c(50,100,150,200),labels=c(50,100,150,200),cex.axis=.8)
       dev.off()
 }
-
+tech="HiSeq X"
+qual="20_1"
+usecol
 
 # mean interval depth between techs
 png('interval.means.ice.vs.agilent.20_1.broadexome.png',width=1200,height=800)
@@ -330,6 +356,7 @@ mtext(side=1,text=paste("Pearson's rho =",formatC(rho,digits=2)),col='red',cex=.
 abline(a=0,b=1,col='#000000')
 dev.off()
 
+# does gc account for any of it?
 
 
 # which genomic regions account for differences in coverage?
@@ -351,6 +378,24 @@ axis(side=1,at=midpoints(gc_chrbreaks),labels=unique(is_gc_chr),lty=0,cex.axis=.
 axis(side=2,at=-(1:10)/10,labels=paste(-(1:10)*10,"%",sep=""),cex.axis=.8)
 dev.off()
 
+hx_depth_delta = is_gc_means$hX.20_1 - is_gc_means$h2000.20_1
+rho = cor.test(gencode_gc_content$gc,hx_depth_delta)$estimate
+m = lm(hx_depth_delta ~ gencode_gc_content$gc)
+summary(m)
+png('gc.content.hx.minus.h2.png',width=1200,height=800)
+plot(gencode_gc_content$gc,hx_depth_delta,pch='.',col=gcolor,
+     ylim=c(-20,20),xaxs='i',xaxt='n',
+     xlab="GC content",ylab="HiSeq X Ten depth minus HiSeq 2000 depth",
+     main="GC content vs. change in depth in HiSeq X Ten vs. 2000\nover all Gencode CDS")
+axis(side=1,at=(0:10)/10,labels=paste((0:10)*10,"%",sep=""))
+abline(m,col='red')
+abline(h=0,col='black')
+h2000more = sum(hx_depth_delta < 0)/length(hx_depth_delta)
+xtenmore = sum(hx_depth_delta > 0)/length(hx_depth_delta)
+text(x=0,y=20,label=paste("HiSeq X Ten has greater depth: ",formatC(100*xtenmore,format="d"),"%",sep=""),pos=4)
+text(x=0,y=-20,label=paste("HiSeq 2000 has greater depth: ",formatC(100*h2000more,format="d"),"%",sep=""),pos=4)
+mtext(side=1,text=paste("Pearson's rho = ",formatC(rho,digits=3)),col='red')
+dev.off()
 
 hx_problem_interval_idx = which(is_gc_means$hX.20_1 < 20 & is_gc_means$hX.20_1 < is_gc_means$h2000.20_1)
 hx_depth_loss = rep(0.0,dim(is_gc_means)[1])
