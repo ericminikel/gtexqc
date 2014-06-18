@@ -1048,7 +1048,7 @@ bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
 # NEXT DO:
 
 # bgzip and tabix the VCFs.
-for fname in ag-h2.*snp.vcf
+for fname in ag-h2.*.vcf
 do
     bsub -q bhour -W 4:00 -P $RANDOM -J bgztb -M 8000000 \
         -o jobtemp/$fname.bgzip.tabix.out \
@@ -1110,5 +1110,61 @@ bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
               -V $wgsvcf \
               -selectType MIXED \
               -o wgs.mixed.only.vcf"
+
+# are "missing" genotypes called by Agilent but not by X Ten concentrated in low-GC regions??
+# need to break Gencode CDS into tranches of GC.
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    cat gencode_cds.gccontent.txt | awk -v mingc=$mingc -v maxgc=$maxgc '$2 > mingc && $2 <= maxgc {print $1}' | awk -F"[:-]" '{print $1"\t"$2"\t"$3}' > gencode_cds_gc_${mingc}_${maxgc}.bed
+done
+# $ wc -l gencode_cds_gc*
+#      21 gencode_cds_gc_0.0_.1.bed
+#     193 gencode_cds_gc_0.1_.2.bed
+#    1926 gencode_cds_gc_0.2_.3.bed
+#   32361 gencode_cds_gc_0.3_.4.bed
+#   68344 gencode_cds_gc_0.4_.5.bed
+#   61821 gencode_cds_gc_0.5_.6.bed
+#   37691 gencode_cds_gc_0.6_.7.bed
+#    6246 gencode_cds_gc_0.7_.8.bed
+#     370 gencode_cds_gc_0.8_.9.bed
+#     147 gencode_cds_gc_0.9_1.0.bed
+#209120 total
+
+wc -l gencode_cds_gc* > gencode_cds_tranches.txt
+
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.gc_${mingc}_${maxgc}_.out \
+        -e jobtemp/ag-hx.gc_${mingc}_${maxgc}_.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.exome.agilent.snp.vcf.gz \
+              -eval ag-hx.wgs.xten.snp.vcf.gz  \
+              -moltenize \
+              -o ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+done
+# the 0.9-1.0 tranche failed, many intervals have no end point, not sure why. this wasn't a problem in any other tranche
+
+mingc=0.0
+maxgc=$(echo $mingc + 0.1 | bc)
+echo -en "gctranche\t" > ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    echo -en "$mingc-$maxgc\t" >> ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+done
+
+
 
 

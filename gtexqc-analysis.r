@@ -477,3 +477,16 @@ gcp_xten_array_noqc_table = acast(data=subset(gcp_xten_array_noqc, Comp_Genotype
                              value.var="Proportion")
 write.table(gcp_xten_array_noqc_table,"gcp_xten_array_noqc_table.txt",sep='\t',row.names=TRUE,col.names=TRUE,quote=FALSE)
 
+gc_by_tranche = read.table("ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt",header=TRUE)
+gc_tranches = read.table("gencode_cds_tranches.txt",header=FALSE)
+
+png('genotypic.concordance.xten.agilent.gencode_cds.by.gc.tranche.png',width=1200,height=800)
+plot(seq(.3,.8,.1),gc_by_tranche$Non.Reference_Sensitivity[4:9],type='b',pch=18,col=gcolor,lwd=2,
+     ylim=c(.90,1.00),xlim=c(.3,.8),xaxt='n',yaxs='i',
+     ylab='X Ten non-reference sensitivity\nto Agilent-called SNPs',
+     xlab='GC content of Gencode interval',
+     main='X Ten sensitivity to Agilent-called SNPs\nin Gencode CDS by GC content')
+axis(side=1,at=(1:8)/10,labels=paste((1:8)*10,"-",(2:9)*10,"%",sep=""),cex.axis=.8)
+#points(seq(0,.8,.1),gc_tranches$V1[1:9]/max(gc_tranches$V1)*.05+.9,type='h',lwd=10,col='#AAAAAA')
+dev.off()
+
