@@ -1166,5 +1166,71 @@ do
 done
 
 
+# now get plot of % above 15 by gencode interval
+
+# for interval_summary, we'll want to transpose, and handle each targetset separately
+for targetset in {gencode_cds.bed,}
+do
+    fname=`ls *$targetset*interval_summary | head -1`
+    echo -n -e "sid\tqual\t" > pct_above_15_$targetset.txt
+    cat $fname | cut -f1 | tail -n +2 | tr '\n' '\t' >> pct_above_15_$targetset.txt
+    echo -n -e "\n" >> pct_above_15_$targetset.txt
+    for fname in *$targetset*interval_summary
+    do
+        sid=`echo $fname | sed 's/cov_[a-z_]*.bed_//' | sed 's/\.bam.*//'` # long sample id
+        qual=`echo $fname | sed 's/.*bam_//' | sed 's/\.sample.*//'` # 20_1 or 0_0
+        echo -n -e "$sid\t$qual\t" >> pct_above_15_$targetset.txt 
+        cat $fname | cut -f9 | tail -n +2 | tr '\n' '\t' >> pct_above_15_$targetset.txt # $5 is sample avg coverage on interval
+        echo -n -e "\n" >> pct_above_15_$targetset.txt
+    done
+done
+
+# take means of pct_above_15
+for targetset in {gencode_cds.bed,}
+do
+    # separate out the high and low quality depth calculations
+    cat bybam/pct_above_15_${targetset}.txt | awk '$2 == "20_1" {print}' > bybam/pct_above_15_${targetset}_hq.txt
+
+    # this was already done before:    
+    # # create greppable (^ at front of line) files listing samples of interest by technology
+    # cat $wesmeta | grep ICE | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > ice.sids.grepready
+    # cat $wesmeta | grep Agilent | cut -f1 | grep -f alldata.samples - | awk '{print "^"$1}' > agilent.sids.grepready
+    # cat $wgsmeta | grep "HiSeq 2000" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > h2.sids.grepready
+    # cat $wgsmeta | grep "HiSeq X" | cut -f1 | grep -f wgs.samples - | awk '{print "^"$1}' > hx.sids.grepready
+    
+    # extract sample sets by quality and technology
+    grep -f ice.sids.grepready bybam/pct_above_15_${targetset}_hq.txt > bybam/pct_above_15_${targetset}_hq_ice.txt
+    grep -f agilent.sids.grepready bybam/pct_above_15_${targetset}_hq.txt > bybam/pct_above_15_${targetset}_hq_agilent.txt
+    grep -f h2.sids.grepready bybam/pct_above_15_${targetset}_hq.txt > bybam/pct_above_15_${targetset}_hq_h2.txt
+    grep -f hx.sids.grepready bybam/pct_above_15_${targetset}_hq.txt > bybam/pct_above_15_${targetset}_hq_hx.txt
+    
+    # take column p15s
+    cat bybam/pct_above_15_${targetset}_hq_ice.txt     | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > p15_${targetset}_hq_ic_p15s.txt
+    cat bybam/pct_above_15_${targetset}_hq_agilent.txt | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > p15_${targetset}_hq_ag_p15s.txt
+    cat bybam/pct_above_15_${targetset}_hq_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > p15_${targetset}_hq_h2_p15s.txt
+    cat bybam/pct_above_15_${targetset}_hq_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > p15_${targetset}_hq_hx_p15s.txt
+    
+    # transpose
+    cat p15_${targetset}_hq_ic_p15s.txt | tr '\t' '\n' > p15_${targetset}_hq_ic_p15s_t.txt
+    cat p15_${targetset}_hq_ag_p15s.txt | tr '\t' '\n' > p15_${targetset}_hq_ag_p15s_t.txt
+    cat p15_${targetset}_hq_h2_p15s.txt | tr '\t' '\n' > p15_${targetset}_hq_h2_p15s_t.txt
+    cat p15_${targetset}_hq_hx_p15s.txt | tr '\t' '\n' > p15_${targetset}_hq_hx_p15s_t.txt
+    
+    # check
+    wc -l p15_${targetset}_hq_ic_p15s_t.txt
+    wc -l p15_${targetset}_hq_ag_p15s_t.txt
+    wc -l p15_${targetset}_hq_h2_p15s_t.txt
+    wc -l p15_${targetset}_hq_hx_p15s_t.txt
+    # ok
+    
+# just this last part didn't work
+
+    # paste together, with an appropriate header and first column
+    cat bybam/pct_above_15_${targetset}.txt | head -1 | tr '\t' '\n' | tail -n +3 > p15_${targetset}_interval_names.txt
+    wc -l p15_${targetset}_interval_names.txt
+    echo -e "interval\tICE.20_1\tAgilent.20_1\th2000.20_1\thX.20_1" > p15_${targetset}_all_p15s.txt
+    paste p15_${targetset}_interval_names.txt p15_${targetset}_hq_ic_p15s_t.txt p15_${targetset}_hq_ag_p15s_t.txt p15_${targetset}_hq_h2_p15s_t.txt p15_${targetset}_hq_hx_p15s_t.txt >> p15_${targetset}_all_p15s.txt
+done
+
 
 
