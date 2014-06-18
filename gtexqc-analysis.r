@@ -490,3 +490,16 @@ axis(side=1,at=(1:8)/10,labels=paste((1:8)*10,"-",(2:9)*10,"%",sep=""),cex.axis=
 #points(seq(0,.8,.1),gc_tranches$V1[1:9]/max(gc_tranches$V1)*.05+.9,type='h',lwd=10,col='#AAAAAA')
 dev.off()
 
+# percent of bases above 15x by gencode interval, by technology
+p15_gc = read.table("p15_gencode_cds.bed_all_p15s.txt",header=TRUE)
+p15_gc$gc_content = gencode_gc_content$gc
+
+png('gc.content.vs.xten.cov.15x.gencode_cds.png',width=1200,height=800)
+plot(p15_gc$gc_content,p15_gc$hX.20_1,pch='.',col=gcolor,
+     xaxs='i',yaxs='i',
+     xlab='GC content of Gencode interval',
+     ylab='Mean percent of bases covered at ≥15x\nacross 78 X Ten samples',
+     main='HiSeq X Ten coverage at ≥15x with MAPQ≥1 and BQ≥20\n in Gencode intervals')
+rho = cor.test(p15_gc$gc_content,p15_gc$hX.20_1)$estimate
+mtext(side=1,text=paste("Pearson's rho = ",formatC(rho, digits=2)))
+dev.off()
