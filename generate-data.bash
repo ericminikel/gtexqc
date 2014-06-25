@@ -1165,6 +1165,38 @@ do
     cat ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-hx.xten.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
 done
 
+# now redo for indels
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-hx.gc_${mingc}_${maxgc}_.out \
+        -e jobtemp/ag-hx.gc_${mingc}_${maxgc}_.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-hx.exome.agilent.indel.vcf.gz \
+              -eval ag-hx.wgs.xten.indel.vcf.gz  \
+              -moltenize \
+              -o ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+done
+
+mingc=0.0
+maxgc=$(echo $mingc + 0.1 | bc)
+echo -en "gctranche\t" > ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    echo -en "$mingc-$maxgc\t" >> ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-hx.xten.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+done
+
 
 # now get plot of % above 15 by gencode interval
 
@@ -1233,4 +1265,75 @@ do
 done
 
 
+
+
+########## 2014-06-24
+
+# Task 2. Agilent as COMP, HiSeq 2000 as EVAL, plot non-ref sensitivity for SNPs and INDELs by GC bin
+
+
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.gc_${mingc}_${maxgc}_.out \
+        -e jobtemp/ag-h2.gc_${mingc}_${maxgc}_.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-h2.exome.agilent.snp.vcf.gz \
+              -eval ag-h2.wgs.2000.snp.vcf.gz  \
+              -moltenize \
+              -o ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+done
+
+# now redo for indels
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    bsub -q bweek -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ag-h2.gc_${mingc}_${maxgc}_indel.out \
+        -e jobtemp/ag-h2.gc_${mingc}_${maxgc}_indel.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ag-h2.exome.agilent.indel.vcf.gz \
+              -eval ag-h2.wgs.2000.indel.vcf.gz  \
+              -moltenize \
+              -o ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+done
+
+
+mingc=0.0
+maxgc=$(echo $mingc + 0.1 | bc)
+echo -en "gctranche\t" > ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    echo -en "$mingc-$maxgc\t" >> ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-h2.2000.vs.agilent.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+done
+
+
+mingc=0.0
+maxgc=$(echo $mingc + 0.1 | bc)
+echo -en "gctranche\t" > ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    echo -en "$mingc-$maxgc\t" >> ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+done
 
