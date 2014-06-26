@@ -1337,3 +1337,129 @@ do
     cat ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ag-h2.2000.vs.agilent.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
 done
 
+
+
+
+########## 2014-06-24
+
+# Task 1. ICE as COMP, X Ten as EVAL, plot non-ref sensitivity for SNPs and INDELs by GC bin
+
+#351 lines in ice, 85 in hx
+comm -12 ice.exome.snames hx.genome.snames > ic-hx.snames
+# 13 shared.
+
+# of these 13,
+# - 6 are in exome.snp.cols and wgs.cols with the same name
+# - 6 are in exome.snp.cols with a different name with C1587:: at the beginning
+# - 1 is in exome.supp.snp.cols
+
+# C1587 is ICE, C1422 is Agilent
+
+grep -f ic-hx.snames exome.snp.cols | sort > ic-hx.ic.cols
+grep -f ic-hx.snames exome.supp.snp.cols | grep -v C1422 | sort > ic-hx.ic.supp.cols
+grep -f ic-hx.snames wgs.cols | sort > ic-hx.hx.cols
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.1.out \
+        -e jobtemp/20140625.1935.1.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $exomesnpvcf \
+             -sf ic-hx.ic.cols \
+             -env \
+             -o ic-hx.exome.ice.snp.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.2.out \
+        -e jobtemp/20140625.1935.2.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $exomesuppsnpvcf \
+             -sf ic-hx.ic.supp.cols \
+             -env \
+             -o ic-hx.exome.ice.supp.snp.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.3.out \
+        -e jobtemp/20140625.1935.3.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $exomeindelvcf \
+             -sf ic-hx.ic.cols \
+             -env \
+             -o ic-hx.exome.ice.indel.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.4.out \
+        -e jobtemp/20140625.1935.4.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $exomesuppindelvcf \
+             -sf ic-hx.ic.supp.cols \
+             -env \
+             -o ic-hx.exome.ice.supp.indel.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.5.out \
+        -e jobtemp/20140625.1935.5.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $wgsvcf \
+             -selectType SNP \
+             -sf ic-hx.hx.cols \
+             -env \
+             -o ic-hx.hx.snp.vcf"
+
+bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.1935.6.out \
+        -e jobtemp/20140625.1935.6.err \
+"java -Xmx8g -jar $gatkjar \
+             -R $b37ref \
+             -T SelectVariants \
+             -L gencode_cds.bed \
+             -V $wgsvcf \
+             -selectType INDEL \
+             -sf ic-hx.hx.cols \
+             -env \
+             -o ic-hx.hx.indel.vcf"
+
+# NEXT UP:
+# combine exome vcfs
+java -Xmx2g -jar $gatkjar \
+   -R $b37ref \
+   -T CombineVariants \
+   --variant ic-hx.exome.ice.snp.vcf \
+   --variant ic-hx.exome.ice.supp.snp.vcf \
+   -o ic-hx.exome.ice.combined.snp.vcf \
+   -genotypeMergeOptions UNIQUIFY
+
+java -Xmx2g -jar $gatkjar \
+   -R $b37ref \
+   -T CombineVariants \
+   --variant ic-hx.exome.ice.indel.vcf \
+   --variant ic-hx.exome.ice.supp.indel.vcf \
+   -o ic-hx.exome.ice.combined.indel.vcf \
+   -genotypeMergeOptions UNIQUIFY
+
+# then will need to rename individuals
+for vcf in ic-hx.*.vcf
+do
+    # remove strings like -0002, and, for exomes, C1587::
+    chromlineno=`grep -m 1 -n ^#CHROM $vcf | cut -f1 -d:`
+    head -n $chromlineno $vcf | sed -r ${chromlineno}'s/-[0-9]+//g' | sed ${chromlineno}'s/C1587:://g' > header.txt
+    bgzip $vcf
+    newfilename=`echo $vcf | sed 's/vcf/sn.vcf.bgz/'`
+    tabix -r header.txt $vcf.gz > $newfilename
+done
+
+
