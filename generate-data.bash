@@ -1435,31 +1435,136 @@ bsub -q bhour -P $RANDOM -J gtexqc -M 8000000 \
 
 # NEXT UP:
 # combine exome vcfs
-java -Xmx2g -jar $gatkjar \
+bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.2128.1.out \
+        -e jobtemp/20140625.2128.1.err \
+"java -Xmx2g -jar $gatkjar \
    -R $b37ref \
    -T CombineVariants \
    --variant ic-hx.exome.ice.snp.vcf \
    --variant ic-hx.exome.ice.supp.snp.vcf \
    -o ic-hx.exome.ice.combined.snp.vcf \
-   -genotypeMergeOptions UNIQUIFY
+   -genotypeMergeOptions UNIQUIFY"
 
-java -Xmx2g -jar $gatkjar \
+bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/20140625.2128.2.out \
+        -e jobtemp/20140625.2128.2.err \
+"java -Xmx2g -jar $gatkjar \
    -R $b37ref \
    -T CombineVariants \
    --variant ic-hx.exome.ice.indel.vcf \
    --variant ic-hx.exome.ice.supp.indel.vcf \
    -o ic-hx.exome.ice.combined.indel.vcf \
-   -genotypeMergeOptions UNIQUIFY
+   -genotypeMergeOptions UNIQUIFY"
 
-# then will need to rename individuals
+# then will need to rename individuals. amazingly this loop only takes <1 minute for all VCFs total.
 for vcf in ic-hx.*.vcf
 do
-    # remove strings like -0002, and, for exomes, C1587::
+    # remove strings like -0002, and, for exomes, C1587::, and CombineVariants adds an annoying ".variant" string we have to remove too
     chromlineno=`grep -m 1 -n ^#CHROM $vcf | cut -f1 -d:`
-    head -n $chromlineno $vcf | sed -r ${chromlineno}'s/-[0-9]+//g' | sed ${chromlineno}'s/C1587:://g' > header.txt
+    head -n $chromlineno $vcf | sed -r ${chromlineno}'s/-[0-9]+//g' | sed ${chromlineno}'s/C1587:://g' | sed ${chromlineno}'s/\.variant//g' > header.txt
     bgzip $vcf
-    newfilename=`echo $vcf | sed 's/vcf/sn.vcf.bgz/'`
+    newfilename=`echo $vcf | sed 's/vcf/sn.vcf.gz/'`
     tabix -r header.txt $vcf.gz > $newfilename
+    tabix $newfilename
 done
 
+# now finally compare the VCFs
+
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ic-hx.gc_${mingc}_${maxgc}_snp.out \
+        -e jobtemp/ic-hx.gc_${mingc}_${maxgc}_snp.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ic-hx.exome.ice.combined.snp.sn.vcf.gz \
+              -eval ic-hx.hx.snp.sn.vcf.gz  \
+              -moltenize \
+              -o ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+    bsub -q bhour -W 4:00 -P $RANDOM -J gtexqc -M 8000000 \
+        -o jobtemp/ic-hx.gc_${mingc}_${maxgc}_indel.out \
+        -e jobtemp/ic-hx.gc_${mingc}_${maxgc}_indel.err \
+        "java -Xmx8g -jar $gatkjar \
+              -R $b37ref \
+              -T GenotypeConcordance \
+              -L gencode_cds_gc_${mingc}_${maxgc}.bed \
+              -gfe 'GQ<30' \
+              -gfe 'DP<10' \
+              -gfc 'GQ<30' \
+              -gfc 'DP<10' \
+              -comp ic-hx.exome.ice.combined.indel.sn.vcf.gz \
+              -eval ic-hx.hx.indel.sn.vcf.gz  \
+              -moltenize \
+              -o ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt"
+done
+
+#after those jobs finish....
+
+mingc=0.0
+maxgc=$(echo $mingc + 0.1 | bc)
+echo -en "gctranche\t" > ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+echo -en "gctranche\t" > ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt   | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+cat ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 1 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+for mingc in {0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8}
+do
+    maxgc=$(echo $mingc + 0.1 | bc)
+    echo -en "$mingc-$maxgc\t" >> ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+    echo -en "$mingc-$maxgc\t" >> ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt   | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ic-hx.xten.vs.ice.snp.gq30dp10.gencode_cds.by-gc-tranche.txt
+    cat ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds_gc_${mingc}_${maxgc}.molt | grep -A 2 "^#:GATKTable:GenotypeConcordance_Summary" | tail -1 >> ic-hx.xten.vs.ice.indel.gq30dp10.gencode_cds.by-gc-tranche.txt
+done
+
+#### Task 3. Redo depth by interval analysis for chrX for women only between 2000 and X Ten
+
+grep -f h2000.snames $arrayfam_postqc | awk '$5=="2" {print $2}' | sed 's/-[0-9]*-SM-[0-9A-Z]*//g' | sort > h2.female.snames
+grep -f hX.snames    $arrayfam_postqc | awk '$5=="2" {print $2}' | sed 's/-[0-9]*-SM-[0-9A-Z]*//g' | sort > hx.female.snames
+wc -l *.female.snames
+ # 28 h2.female.snames
+ # 22 hx.female.snames
+ # 50 total
+# same numbers as above, good.
+
+# now extract interval summaries for only those indivs.
+
+targetset=gencode_cds.bed
+
+# create greppable (^ at front of line) files listing samples of interest by technology
+cat $wgsmeta | grep "HiSeq 2000" | cut -f1 | grep -f h2.female.snames - | awk '{print "^"$1}' > h2.f.sids.grepready
+cat $wgsmeta | grep "HiSeq X"    | cut -f1 | grep -f hx.female.snames - | awk '{print "^"$1}' > hx.f.sids.grepready
+
+# extract sample sets by quality and technology
+grep -f h2.f.sids.grepready bybam/interval_summary_${targetset}_hq.txt > interval_summary_${targetset}_hq_f_h2.txt
+grep -f hx.f.sids.grepready bybam/interval_summary_${targetset}_hq.txt > interval_summary_${targetset}_hq_f_hx.txt
+
+# take column means
+cat interval_summary_${targetset}_hq_f_h2.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_f_h2_means.txt
+cat interval_summary_${targetset}_hq_f_hx.txt      | awk '{f=NF;for(i=3;i<=NF;i++)a[i]+=$i}END{for(i=3;i<=f;i++)printf a[i]/(NR)"\t";print ""}' > is_${targetset}_hq_f_hx_means.txt
+
+# transpose
+cat is_${targetset}_hq_f_h2_means.txt | tr '\t' '\n' > is_${targetset}_hq_f_h2_means_t.txt
+cat is_${targetset}_hq_f_hx_means.txt | tr '\t' '\n' > is_${targetset}_hq_f_hx_means_t.txt
+
+# check
+wc -l is_${targetset}_hq_f_h2_means_t.txt
+wc -l is_${targetset}_hq_f_hx_means_t.txt
+# both 209512, ok
+
+# paste together, with an appropriate header and first column
+header_source=`ls bybam/*${targetset}*interval_summary | head -1`
+cat $header_source | cut -f1 | tail -n +2 > is_${targetset}_f_interval_names.txt
+echo -ne "\n" >> is_${targetset}_f_interval_names.txt # add one blank row to match the data
+wc -l is_${targetset}_f_interval_names.txt
+echo -e "interval\th2000.20_1\thX.20_1" > is_${targetset}_f_all_means.txt
+paste is_${targetset}_f_interval_names.txt is_${targetset}_hq_f_h2_means_t.txt is_${targetset}_hq_f_hx_means_t.txt >> is_${targetset}_f_all_means.txt
+
+cat is_gencode_cds.bed_f_all_means.txt | less
 
