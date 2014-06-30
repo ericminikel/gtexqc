@@ -541,10 +541,10 @@ gc_tranches = read.table("gencode_cds_tranches.txt",header=FALSE)
 
 png('genotypic.concordance.snp.gencode_cds.by.gc.tranche.png',width=1200,height=800)
 plot(seq(.3,.7,.1),aghx_gc_by_tranche_snp$Non.Reference_Sensitivity[4:8],type='b',pch=4,col='red',lwd=3,
-     ylim=c(.90,1.00),xlim=c(.3,.7),xaxt='n',yaxs='i',
-     ylab='Non-reference sensitivity to Agilent-called SNPs',
+     ylim=c(.94,1.00),xlim=c(.3,.7),xaxt='n',yaxs='i',
+     ylab='Non-reference sensitivity to WES-called SNPs',
      cex.lab=1.4,xlab='GC content of Gencode interval',
-     main='WGS sensitivity to Agilent-called SNPs\nin Gencode CDS by GC content')
+     main='WGS sensitivity to WES-called SNPs\nin Gencode CDS by GC content')
 points(seq(.3,.7,.1),agh2_gc_by_tranche_snp$Non.Reference_Sensitivity[4:8],type='b',pch=15,col='violet',lwd=3)
 points(seq(.3,.7,.1),ichx_gc_by_tranche_snp$Non.Reference_Sensitivity[4:8],type='b',pch=20,col='black',lwd=3)
 axis(side=1,at=(1:8)/10,labels=paste((1:8)*10,"-",(2:9)*10,"%",sep=""),cex.axis=.8)
@@ -553,15 +553,16 @@ legend('bottomleft',c("X Ten vs. Agilent","2000 vs. Agilent","X Ten vs. ICE"),co
 dev.off()
 
 
-png('genotypic.concordance.ag-hx-h2.xten.agilent.indel.gencode_cds.by.gc.tranche.png',width=1200,height=800)
-plot(seq(.3,.8,.1),aghx_gc_by_tranche_indel$Non.Reference_Sensitivity[4:9],type='b',pch=18,col=gcolor,lwd=4,
-     ylim=c(0,1.00),xlim=c(.3,.8),xaxt='n',yaxs='i',
-     ylab='Non-reference sensitivity to Agilent-called INDELs',
+png('genotypic.concordance.indel.gencode_cds.by.gc.tranche.png',width=1200,height=800)
+plot(seq(.3,.7,.1),aghx_gc_by_tranche_indel$Non.Reference_Sensitivity[4:8],type='b',pch=4,col='red',lwd=3,
+     ylim=c(.4,1.00),xlim=c(.3,.7),xaxt='n',yaxs='i',
+     ylab='Non-reference sensitivity to WES-called INDELs',
      cex.lab=1.4,xlab='GC content of Gencode interval',
-     main='WGS sensitivity to Agilent-called INDELs\nin Gencode CDS by GC content')
-points(seq(.3,.8,.1),agh2_gc_by_tranche_indel$Non.Reference_Sensitivity[4:9],type='b',pch=4,col=gcolor,lwd=2)
+     main='WGS sensitivity to WES-called INDELs\nin Gencode CDS by GC content')
+points(seq(.3,.7,.1),agh2_gc_by_tranche_indel$Non.Reference_Sensitivity[4:8],type='b',pch=15,col='violet',lwd=3)
+points(seq(.3,.7,.1),ichx_gc_by_tranche_indel$Non.Reference_Sensitivity[4:8],type='b',pch=20,col='black',lwd=3)
 axis(side=1,at=(1:8)/10,labels=paste((1:8)*10,"-",(2:9)*10,"%",sep=""),cex.axis=.8)
-legend('bottomleft',c("HiSeq 2000","HiSeq X Ten"),col=gcolor,pch=c(4,18),lwd=c(2,4))
+legend('bottomleft',c("X Ten vs. Agilent","2000 vs. Agilent","X Ten vs. ICE"),col=c('red','violet','black'),pch=c(4,15,20),lwd=c(3,3,3))
 #points(seq(0,.8,.1),gc_tranches$V1[1:9]/max(gc_tranches$V1)*.05+.9,type='h',lwd=10,col='#AAAAAA')
 dev.off()
 
